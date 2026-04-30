@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { CheckCircle, AlertTriangle, Save, ChevronDown, ChevronUp } from 'lucide-react'
+import { CheckCircle, AlertTriangle, Save } from 'lucide-react'
 import { useStorage } from '../hooks/useStorage'
 import { CATEGORIES, PRIORITIES, MASTERPLAN_PRINCIPLES, REGULATORY_ITEMS, AUDIT_ITEMS } from '../data/categories'
+import AIValidation from './AIValidation'
 
 const PRINCIPLE_OPTIONS = ['Supports', 'Neutral', 'Conflicts']
 const REG_OPTIONS = ['Yes', 'No', 'Conditional', 'N/A']
@@ -20,6 +21,7 @@ const empty = {
   auditChecks: Object.fromEntries(AUDIT_ITEMS.map(a => [a, false])),
   auditPassed: undefined,
   mapChangeRequired: false,
+  validation: null,
   createdAt: '',
 }
 
@@ -60,6 +62,11 @@ export default function SuggestionForm() {
     setTimeout(() => navigate('/suggestions'), 800)
   }
 
+  function handleValidationSave(validation) {
+    setForm(f => ({ ...f, validation }))
+    setNested('auditChecks', 'AI reference validation run and saved', true)
+  }
+
   const sections = [
     { label: 'Basics', fields: basics(form, set) },
     { label: 'Give-Take', fields: giveTake(form, set) },
@@ -68,6 +75,7 @@ export default function SuggestionForm() {
     { label: 'Principles', fields: principles(form, setNested) },
     { label: 'Horizons', fields: horizons(form, set) },
     { label: 'Audit', fields: audit(form, setNested, auditScore, auditTotal) },
+    { label: '✦ AI Validate', fields: <AIValidation suggestion={form} onSave={handleValidationSave} /> },
   ]
 
   return (

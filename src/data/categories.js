@@ -46,6 +46,15 @@ export const AUDIT_ITEMS = [
   'Dependencies listed',
   'Priority set',
   'Give-take is balanced — benefit does not obscure cost',
+  'AI reference validation run and saved',
+]
+
+export const FEASIBILITY_OPTIONS = [
+  'Feasible Now',
+  'Feasible with Minor Changes',
+  'Feasible with Major Changes',
+  'Requires State Intervention',
+  'Not Feasible',
 ]
 
 export const MAP_AUDIT_ITEMS = [
