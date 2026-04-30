@@ -1,5 +1,5 @@
 import { Routes, Route, NavLink, useLocation } from 'react-router-dom'
-import { Map, Lightbulb, FileEdit, ClipboardList, LayoutDashboard, Menu, X } from 'lucide-react'
+import { Map, Lightbulb, FileEdit, ClipboardList, LayoutDashboard, Menu, X, BookOpen } from 'lucide-react'
 import { useState } from 'react'
 import Dashboard from './components/Dashboard'
 import MapViewer from './components/MapViewer'
@@ -7,10 +7,12 @@ import SuggestionForm from './components/SuggestionForm'
 import SuggestionList from './components/SuggestionList'
 import MapChangeForm from './components/MapChangeForm'
 import SessionLog from './components/SessionLog'
+import ReferenceLibrary from './components/ReferenceLibrary'
 
 const nav = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/maps', icon: Map, label: 'LEP Maps' },
+  { to: '/references', icon: BookOpen, label: 'References' },
   { to: '/suggestions', icon: Lightbulb, label: 'Suggestions' },
   { to: '/new', icon: FileEdit, label: 'New Suggestion' },
   { to: '/map-change', icon: FileEdit, label: 'Map Change' },
@@ -83,6 +85,7 @@ export default function App() {
           <Route path="/new" element={<SuggestionForm />} />
           <Route path="/new/:id" element={<SuggestionForm />} />
           <Route path="/map-change" element={<MapChangeForm />} />
+          <Route path="/references" element={<ReferenceLibrary />} />
           <Route path="/log" element={<SessionLog />} />
         </Routes>
       </main>

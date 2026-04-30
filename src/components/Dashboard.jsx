@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom'
-import { Play, Map, Lightbulb, AlertTriangle, CheckCircle, Clock, FileEdit } from 'lucide-react'
+import { Play, Map, Lightbulb, AlertTriangle, CheckCircle, Clock, FileEdit, BookOpen } from 'lucide-react'
 import { useStorage } from '../hooks/useStorage'
 import { MAPS } from '../data/maps'
+import { REFERENCE_DOCS } from '../data/referenceDocs'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -67,8 +68,8 @@ export default function Dashboard() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard icon={Map} label="Current Maps" value={MAPS.filter(m => m.isCurrent).length} sub="across 10 types" color="text-mosman-teal" />
+        <StatCard icon={BookOpen} label="Reference Docs" value={REFERENCE_DOCS.length} sub="DCPs, policies, drawings" color="text-indigo-400" />
         <StatCard icon={Lightbulb} label="Suggestions" value={suggestions.length} sub={`${passed} passed audit`} color="text-mosman-pink" />
-        <StatCard icon={AlertTriangle} label="Failed Audit" value={failed} sub="need fixing" color="text-yellow-400" />
         <StatCard icon={Clock} label="Map Changes" value={mapChanges.length} sub={`${mapsPending} DWG pending`} color="text-blue-400" />
       </div>
 
@@ -96,6 +97,13 @@ export default function Dashboard() {
             desc="Suggest modifications to LEP zoning, height, or FSR maps"
             color="border-blue-500"
             onClick={() => navigate('/map-change')}
+          />
+          <ActionCard
+            icon={BookOpen}
+            title="Reference Library"
+            desc="DCPs, standard drawings, policies, plans of management"
+            color="border-indigo-500"
+            onClick={() => navigate('/references')}
           />
         </div>
       </div>
