@@ -75,30 +75,41 @@ function corridorPolygon(coords, halfWidthM = 11) {
   return [...left, ...right.reverse(), left[0]]
 }
 
-// Heights gradient west→east matching masterplan:
-// Option 2 (High & Narrow): 3F at Cremorne end → 26-28F at Spit Junction (red peak)
-// Option 1 (Low & Wide):    3F at Cremorne end → 16-20F at Spit Junction (yellow peak)
-// Gradient driven by centroid_lng added to building data.
+// Heights gradient west→east matching masterplan storey bands:
+//
+// Option 1 (Low & Wide, 3-20F, page 23):
+//   Most of area = 3-4F (light blue) → corridor = 5-8F (blue)
+//   → Spit Junction node = 9-15F (green) → peak = 16-20F (yellow)
+//
+// Option 2 (High & Narrow, 3-28F, page 25):
+//   Cremorne = 3-4F (light blue) → corridor = 5-8F (blue)
+//   → mid = 9-15F (green) → near Spit = 16-20F (yellow)
+//   → approaching = 21-25F (orange) → Spit Junction peak = 26-28F (red)
+//
+// Multiplier targets a ~6.4m (2-storey) base building.
+// 1F ≈ 3.3m. 4F = 13.2m → ×2.1. 8F = 26.4m → ×4.1. 15F = 49.5m → ×7.7. 20F = 66m → ×10.3. 28F = 92.4m → ×14.4
 function buildingHeightExpr(showOption1, showOption2) {
   if (showOption2) {
     return ['*', ['get', 'height'],
       ['interpolate', ['linear'], ['get', 'centroid_lng'],
-        151.215, 1.8,   // ~3-4F at Cremorne/Warringah Fwy end
-        151.225, 3.0,   // ~6F mid-west
-        151.232, 5.5,   // ~11F Military Rd central
-        151.238, 8.5,   // ~17-18F approaching Spit Junction
-        151.244, 13.5,  // ~26-28F at Spit Junction (red zone)
+        151.215, 2.0,   // 3-4F — light blue (Cremorne)
+        151.224, 3.0,   // 5-6F — blue (entering corridor)
+        151.230, 4.5,   // 8F — blue (Military Rd central)
+        151.236, 7.5,   // 12-14F — green (mid-corridor)
+        151.240, 10.5,  // 20F — yellow/orange (near Spit Junction)
+        151.244, 14.5,  // 26-28F — red (Spit Junction peak)
       ]
     ]
   }
   if (showOption1) {
     return ['*', ['get', 'height'],
       ['interpolate', ['linear'], ['get', 'centroid_lng'],
-        151.215, 1.5,   // ~3F at western edge
-        151.225, 2.5,   // ~5F mid-west
-        151.232, 4.0,   // ~8F Military Rd central
-        151.238, 5.5,   // ~11F approaching Spit Junction
-        151.244, 7.5,   // ~16-20F at Spit Junction (yellow zone)
+        151.215, 1.8,   // 3-4F — light blue (broad outer area)
+        151.224, 2.0,   // 4F — light blue (still outer area)
+        151.230, 2.8,   // 5-6F — blue (Military Rd corridor)
+        151.236, 4.5,   // 8-9F — blue/green (approaching node)
+        151.240, 6.5,   // 12-13F — green (Spit Junction approach)
+        151.244, 9.5,   // 18-20F — yellow (Spit Junction peak)
       ]
     ]
   }
@@ -107,27 +118,29 @@ function buildingHeightExpr(showOption1, showOption2) {
 
 function buildingColorExpr(showOption1, showOption2) {
   if (showOption2) {
-    // Option 2 palette: cyan(3-4F) → blue(5-8F) → green(9-15F) → yellow(16-20F) → orange(21-25F) → red(26-28F)
-    // Driven by centroid_lng (west=short/blue, east=tall/red at Spit Junction)
+    // Option 2 masterplan colours (page 25 key):
+    // light blue=3-4F, blue=5-8F, green=9-15F, yellow=16-20F, orange=21-25F, red=26-28F
     return [
       'interpolate', ['linear'], ['get', 'centroid_lng'],
-      151.215, '#93c5fd',  // pale blue — 3-4F
-      151.225, '#3b82f6',  // blue — 5-8F
+      151.215, '#bfdbfe',  // light blue — 3-4F
+      151.224, '#3b82f6',  // blue — 5-8F
       151.232, '#22c55e',  // green — 9-15F
-      151.238, '#eab308',  // yellow — 16-20F
+      151.237, '#eab308',  // yellow — 16-20F
       151.241, '#f97316',  // orange — 21-25F
-      151.244, '#ef4444',  // red — 26-28F at Spit Junction
+      151.244, '#ef4444',  // red — 26-28F Spit Junction peak
     ]
   }
   if (showOption1) {
-    // Option 1 palette: cyan(3-4F) → blue(5-8F) → green(9-15F) → yellow(16-20F) — no orange/red
+    // Option 1 masterplan colours (page 23 key):
+    // light blue=3-4F (dominant, outer area), blue=5-8F (corridor), green=9-15F, yellow=16-20F peak
+    // Blue dominates until very close to Spit Junction
     return [
       'interpolate', ['linear'], ['get', 'centroid_lng'],
-      151.215, '#93c5fd',  // pale blue — 3-4F
-      151.225, '#3b82f6',  // blue — 5-8F
-      151.232, '#22c55e',  // green — 9-15F
-      151.238, '#a3e635',  // lime — 12-15F
-      151.244, '#eab308',  // yellow — 16-20F max
+      151.215, '#bfdbfe',  // light blue — 3-4F (most of the broad area)
+      151.226, '#60a5fa',  // medium blue — 5-6F (Military Rd corridor)
+      151.232, '#3b82f6',  // blue — 7-8F (corridor)
+      151.238, '#22c55e',  // green — 9-15F (near Spit Junction)
+      151.242, '#eab308',  // yellow — 16-20F (Spit Junction peak only)
     ]
   }
   return '#64748b'
