@@ -55,11 +55,17 @@ export default function Mosman3DMap({
   scenario,
   showGridStress = true,
   onNetworkAreaSelect,
+  calibrationMode = false,
+  calibCoords,
+  onCalibratedCoords,
+  layerOpacity = 75,
 }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const loadedRef = useRef(false)
   const selectRef = useRef(onNetworkAreaSelect)
+  const calibMarkersRef = useRef([])
+  const calibCoordsRef = useRef(null)
 
   const data = useMemo(() => ({
     boundary: boundaryCollection(),
@@ -80,6 +86,46 @@ export default function Mosman3DMap({
   }, [onNetworkAreaSelect])
 
   useEffect(() => {
+    const map = mapRef.current
+    if (!map || !loadedRef.current) return
+
+    if (calibrationMode) {
+      const initCoords = (calibCoords || OFFICIAL_LEP_SHEET_002_COORDS).map(c => [...c])
+      calibCoordsRef.current = initCoords
+      map.easeTo({ pitch: 0, bearing: 0, duration: 600 })
+
+      const LABELS = ['NW', 'NE', 'SE', 'SW']
+      calibMarkersRef.current = initCoords.map((coord, index) => {
+        const el = document.createElement('div')
+        el.style.cssText = [
+          'background:#f0abfc', 'color:#0f172a', 'font-size:11px', 'font-weight:700',
+          'padding:3px 8px', 'border-radius:4px', 'border:2px solid #0f172a',
+          'cursor:grab', 'user-select:none', 'white-space:nowrap',
+          'box-shadow:0 2px 8px rgba(0,0,0,0.55)', 'font-family:monospace',
+        ].join(';')
+        el.textContent = LABELS[index]
+
+        const marker = new maplibregl.Marker({ element: el, draggable: true })
+          .setLngLat(coord)
+          .addTo(map)
+
+        marker.on('drag', () => {
+          const { lng, lat } = marker.getLngLat()
+          calibCoordsRef.current[index] = [Number(lng.toFixed(6)), Number(lat.toFixed(6))]
+          updateCalibrationSources(map, calibCoordsRef.current)
+          onCalibratedCoords?.(calibCoordsRef.current.map(c => [...c]))
+        })
+
+        return marker
+      })
+    } else {
+      calibMarkersRef.current.forEach(m => m.remove())
+      calibMarkersRef.current = []
+      map.easeTo({ pitch: 66, bearing: -28, duration: 600 })
+    }
+  }, [calibrationMode])
+
+  useEffect(() => {
     if (!containerRef.current || mapRef.current) return undefined
 
     const map = new maplibregl.Map({
@@ -87,6 +133,7 @@ export default function Mosman3DMap({
       style: BASE_STYLE,
       center: MOSMAN_MAP.center,
       zoom: 14.15,
+      minZoom: 11,
       pitch: 66,
       bearing: -28,
       maxBounds: MOSMAN_MAP.bounds,
@@ -103,7 +150,7 @@ export default function Mosman3DMap({
       addPlanningLayers(map)
       addStressInteractions(map, selectRef)
       updateMapSources(map, data)
-      updateOfficialMapSheets(map, activeLayers)
+      updateOfficialMapSheets(map, activeLayers, layerOpacity)
     })
 
     return () => {
@@ -116,8 +163,8 @@ export default function Mosman3DMap({
   useEffect(() => {
     if (!loadedRef.current || !mapRef.current) return
     updateMapSources(mapRef.current, data)
-    updateOfficialMapSheets(mapRef.current, activeLayers)
-  }, [data])
+    updateOfficialMapSheets(mapRef.current, activeLayers, layerOpacity)
+  }, [data, layerOpacity])
 
   function flyToDensity() {
     mapRef.current?.flyTo({
@@ -144,13 +191,6 @@ export default function Mosman3DMap({
       <div ref={containerRef} className="h-[540px] min-h-[420px] w-full" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-slate-950/45 to-transparent" />
       <div className="pointer-events-none holo-scanlines absolute inset-0" />
-      <div className="holo-map-panel absolute left-3 top-3 max-w-sm p-3 text-white">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200">Hologram density model</p>
-        <p className="mt-1 text-sm font-semibold">{selectedScope.label}</p>
-        <p className="mt-1 text-xs text-slate-300">
-          Neon roofline extensions follow current OSM footprints. LV and 11 kV stress pockets appear as hot translucent fields when enabled.
-        </p>
-      </div>
       <div className="absolute bottom-3 right-3 flex gap-2">
         <button
           type="button"
@@ -569,11 +609,19 @@ function updateMapSources(map, data) {
   setSourceData(map, 'grid-upgrades', data.upgrades)
 }
 
-function updateOfficialMapSheets(map, activeLayers) {
+function updateOfficialMapSheets(map, activeLayers, layerOpacity = 75) {
+  const scale = layerOpacity / 100
   OFFICIAL_LEP_RASTER_OVERLAYS.forEach(sheet => {
     const layerId = `official-lep-${sheet.code.toLowerCase()}`
     if (!map.getLayer(layerId)) return
-    map.setPaintProperty(layerId, 'raster-opacity', activeLayers.includes(sheet.code) ? sheet.opacity : 0)
+    map.setPaintProperty(layerId, 'raster-opacity', activeLayers.includes(sheet.code) ? sheet.opacity * scale : 0)
+  })
+}
+
+function updateCalibrationSources(map, coords) {
+  OFFICIAL_LEP_RASTER_OVERLAYS.forEach(sheet => {
+    const src = map.getSource(`official-lep-${sheet.code.toLowerCase()}`)
+    if (src) src.setCoordinates(coords)
   })
 }
 

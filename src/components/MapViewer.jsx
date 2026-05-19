@@ -14,6 +14,7 @@ import {
   GRID_STRESS_AREAS,
   GRID_UPGRADES,
   IMPACT_AREAS,
+  OFFICIAL_LEP_SHEET_002_COORDS,
   OVERLAY_LAYERS,
 } from '../data/planningOverlays'
 
@@ -27,6 +28,12 @@ export default function MapViewer() {
   const [showGridStress, setShowGridStress] = useState(false)
   const [selectedNetworkArea, setSelectedNetworkArea] = useState(GRID_STRESS_AREAS[0])
   const [selectedPlanGap, setSelectedPlanGap] = useState(FUTURE_PLAN_GAPS[0])
+  const [layerOpacity, setLayerOpacity] = useState(75)
+  const [calibrationMode, setCalibrationMode] = useState(false)
+  const [calibratedCoords, setCalibratedCoords] = useState(() =>
+    OFFICIAL_LEP_SHEET_002_COORDS.map(c => [...c])
+  )
+
   const [futureOptions, setFutureOptions] = useState({
     managedCharging: true,
     v2g: true,
@@ -81,7 +88,20 @@ export default function MapViewer() {
               <Layers size={16} className="text-mosman-teal" />
               <p className="text-sm font-semibold text-slate-900">Master Mosman Overlay</p>
             </div>
-            <span className="text-xs text-slate-500">{activeLayers.length} layers on</span>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setCalibrationMode(v => !v)}
+                className={`text-xs font-semibold px-2.5 py-1 rounded transition-colors ${
+                  calibrationMode
+                    ? 'bg-fuchsia-200 text-fuchsia-900'
+                    : 'bg-slate-100 text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                {calibrationMode ? 'Exit calibration' : 'Calibrate layer'}
+              </button>
+              <span className="text-xs text-slate-500">{activeLayers.length} layers on</span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-0 md:grid-cols-[230px_minmax(0,1fr)]">
@@ -93,6 +113,21 @@ export default function MapViewer() {
                   detail="20-30 year inadequate power-line and distributor areas"
                   checked={showGridStress}
                   onChange={() => setShowGridStress(value => !value)}
+                />
+              </div>
+
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Layer opacity</p>
+                  <span className="text-xs font-mono font-bold text-slate-700">{layerOpacity}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="100"
+                  value={layerOpacity}
+                  onChange={e => setLayerOpacity(Number(e.target.value))}
+                  className="w-full accent-mosman-teal cursor-pointer"
                 />
               </div>
 
@@ -118,6 +153,49 @@ export default function MapViewer() {
               </div>
             </div>
 
+            <div className="flex flex-col">
+            <div className="px-4 pt-3 pb-2 border-b border-slate-200/10">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200">Hologram density model</p>
+              <p className="mt-0.5 text-sm font-semibold text-white">{selectedScope.label}</p>
+              <p className="mt-0.5 text-xs text-slate-300">
+                Neon roofline extensions follow current OSM footprints. LV and 11 kV stress pockets appear as hot translucent fields when enabled.
+              </p>
+            </div>
+
+            {calibrationMode && (
+              <div className="bg-fuchsia-950 border-b border-fuchsia-500/30 px-4 py-3">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <p className="text-xs font-bold text-fuchsia-200 uppercase tracking-wider">
+                    Calibration — drag the corner handles to align the layer
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const text = JSON.stringify(calibratedCoords.map(c => [
+                        Number(c[0].toFixed(6)),
+                        Number(c[1].toFixed(6)),
+                      ]))
+                      navigator.clipboard.writeText(text)
+                    }}
+                    className="text-xs font-semibold bg-fuchsia-200 text-fuchsia-900 px-2.5 py-1 rounded hover:bg-white flex-shrink-0"
+                  >
+                    Copy coords
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {['NW', 'NE', 'SE', 'SW'].map((label, index) => (
+                    <div key={label} className="bg-fuchsia-900/60 rounded px-2 py-1.5">
+                      <p className="text-[10px] font-bold text-fuchsia-300 mb-0.5">{label}</p>
+                      <p className="text-xs text-white font-mono leading-snug">
+                        {calibratedCoords[index]?.[0].toFixed(4)},<br />
+                        {calibratedCoords[index]?.[1].toFixed(4)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="p-4">
               <Mosman3DMap
                 activeLayers={activeLayers}
@@ -126,6 +204,10 @@ export default function MapViewer() {
                 scenario={scenario}
                 showGridStress={showGridStress}
                 onNetworkAreaSelect={setSelectedNetworkArea}
+                layerOpacity={layerOpacity}
+                calibrationMode={calibrationMode}
+                calibCoords={calibratedCoords}
+                onCalibratedCoords={setCalibratedCoords}
               />
               <MapLegend activeLayers={activeLayers} showGridStress={showGridStress} />
               <NetworkStressStrip
@@ -146,6 +228,7 @@ export default function MapViewer() {
                   </div>
                 ))}
               </div>
+            </div>
             </div>
           </div>
         </div>

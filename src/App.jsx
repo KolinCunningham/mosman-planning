@@ -1,15 +1,12 @@
 import { Routes, Route, NavLink } from 'react-router-dom'
-import { Map, Lightbulb, FileEdit, ClipboardList, LayoutDashboard, Menu, X, BookOpen, Zap, Building2 } from 'lucide-react'
+import { Map, LayoutDashboard, Menu, X, BookOpen, Zap, Building2, MessageSquare } from 'lucide-react'
 import { useState } from 'react'
 import Dashboard from './components/Dashboard'
 import MapViewer from './components/MapViewer'
-import SuggestionForm from './components/SuggestionForm'
-import SuggestionList from './components/SuggestionList'
-import MapChangeForm from './components/MapChangeForm'
-import SessionLog from './components/SessionLog'
 import ReferenceLibrary from './components/ReferenceLibrary'
 import PowerlineData from './components/PowerlineData'
 import BypassVisualization from './components/BypassVisualization'
+import CouncilSubmission from './components/CouncilSubmission'
 
 const nav = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -17,10 +14,7 @@ const nav = [
   { to: '/bypass', icon: Building2, label: 'Bypass Viz' },
   { to: '/powerlines', icon: Zap, label: 'Powerlines' },
   { to: '/references', icon: BookOpen, label: 'References' },
-  { to: '/suggestions', icon: Lightbulb, label: 'Suggestions' },
-  { to: '/new', icon: FileEdit, label: 'New Suggestion' },
-  { to: '/map-change', icon: FileEdit, label: 'Map Change' },
-  { to: '/log', icon: ClipboardList, label: 'Session Log' },
+  { to: '/submission', icon: MessageSquare, label: 'Submission' },
 ]
 
 export default function App() {
@@ -30,16 +24,8 @@ export default function App() {
     <div className="min-h-screen flex flex-col bg-mosman-dark">
       <header className="bg-white border-b border-mosman-line sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex gap-1">
-              <span className="w-3 h-6 bg-mosman-pink rounded-sm rotate-12 inline-block" />
-              <span className="w-3 h-6 bg-mosman-teal rounded-sm rotate-12 inline-block" />
-              <span className="w-3 h-6 bg-mosman-pink rounded-sm rotate-12 inline-block" />
-            </div>
-            <div>
-              <h1 className="text-slate-900 font-bold text-lg leading-none">Mosman Planning</h1>
-              <p className="text-xs text-slate-500">Intelligence System</p>
-            </div>
+          <div className="flex items-center">
+            <img src="/bokkas-logo.svg" alt="Bokkas" className="h-10 w-auto" />
           </div>
           <button className="md:hidden text-slate-500" onClick={() => setMenuOpen(!menuOpen)}>
             {menuOpen ? <X size={22} /> : <Menu size={22} />}
@@ -83,13 +69,9 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/maps" element={<MapViewer />} />
           <Route path="/powerlines" element={<PowerlineData />} />
-          <Route path="/suggestions" element={<SuggestionList />} />
-          <Route path="/new" element={<SuggestionForm />} />
-          <Route path="/new/:id" element={<SuggestionForm />} />
-          <Route path="/map-change" element={<MapChangeForm />} />
           <Route path="/references" element={<ReferenceLibrary />} />
           <Route path="/bypass" element={<BypassVisualization />} />
-          <Route path="/log" element={<SessionLog />} />
+          <Route path="/submission" element={<CouncilSubmission />} />
         </Routes>
       </main>
 

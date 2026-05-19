@@ -385,8 +385,8 @@ export const GRID_UPGRADES = [
 export const MOSMAN_MAP = {
   center: [151.247, -33.827],
   bounds: [
-    [151.225, -33.856],
-    [151.272, -33.801],
+    [151.130, -33.940],
+    [151.370, -33.720],
   ],
   boundary: [
     [151.229, -33.852],
@@ -450,11 +450,15 @@ export const OFFICIAL_LEP_RASTER_OVERLAYS = [
   },
 ]
 
+// Georeferenced corners for the LZN_002 PNG.
+// Source: PDF scale 1:10,000 @ A3 (420x297mm). PNG = full page = 4200m x 2970m.
+// Anchor: cyan B1 centroid at pixel (41.8%, 40.5%) = [151.244, -33.824] (Military Rd / Spit Jct).
+// Order: top-left, top-right, bottom-right, bottom-left (MapLibre image source format).
 export const OFFICIAL_LEP_SHEET_002_COORDS = [
-  [151.225, -33.817],
-  [151.269, -33.817],
-  [151.269, -33.8485],
-  [151.225, -33.8485],
+  [151.22635,  -33.816552],
+  [151.261924, -33.816781],
+  [151.261012, -33.842067],
+  [151.225579, -33.841727],
 ]
 
 export const GEO_ROUTES = [
@@ -723,17 +727,20 @@ export const GEO_PLANNING_LAYERS = [
   },
 ]
 
+// Zone boundaries strictly follow the Military Rd / Spit Rd B1 commercial corridor.
+// Width ~100m either side of road centreline only — no residential bleed.
 export const FUTURE_DEVELOPMENT_ZONES = [
   {
+    // Spit Junction gateway — widest zone, this is the masterplan focal point
     id: 'spit-junction-core',
     label: 'Spit Junction core',
     coords: [
       [151.240, -33.819],
-      [151.248, -33.819],
-      [151.251, -33.824],
-      [151.247, -33.829],
-      [151.239, -33.827],
-      [151.237, -33.822],
+      [151.250, -33.819],
+      [151.253, -33.823],
+      [151.249, -33.829],
+      [151.239, -33.829],
+      [151.236, -33.824],
       [151.240, -33.819],
     ],
     baselineHeight: 18,
@@ -744,14 +751,14 @@ export const FUTURE_DEVELOPMENT_ZONES = [
     color: '#22d3ee',
   },
   {
+    // Narrow parallelogram hugging Military Rd SW of junction — ~100m each side
     id: 'military-road-west',
     label: 'Military Road west corridor',
     coords: [
       [151.229, -33.827],
-      [151.238, -33.825],
-      [151.242, -33.830],
-      [151.233, -33.834],
-      [151.229, -33.831],
+      [151.240, -33.822],
+      [151.241, -33.825],
+      [151.230, -33.830],
       [151.229, -33.827],
     ],
     baselineHeight: 12,
@@ -762,15 +769,15 @@ export const FUTURE_DEVELOPMENT_ZONES = [
     color: '#a78bfa',
   },
   {
-    id: 'military-road-east',
-    label: 'Military Road east corridor',
+    // Narrow parallelogram hugging Spit Rd NE of junction — ~100m each side
+    id: 'spit-road-north',
+    label: 'Spit Road north corridor',
     coords: [
-      [151.248, -33.821],
-      [151.259, -33.812],
-      [151.263, -33.816],
-      [151.253, -33.827],
-      [151.247, -33.826],
-      [151.248, -33.821],
+      [151.249, -33.820],
+      [151.263, -33.806],
+      [151.265, -33.809],
+      [151.252, -33.823],
+      [151.249, -33.820],
     ],
     baselineHeight: 12,
     moderateHeight: 40,
@@ -780,16 +787,17 @@ export const FUTURE_DEVELOPMENT_ZONES = [
     color: '#60a5fa',
   },
   {
+    // Mosman Village local centre — compact block around the B1 centre
     id: 'mosman-village',
-    label: 'Mosman Village infill',
+    label: 'Mosman Village centre',
     coords: [
-      [151.241, -33.833],
-      [151.250, -33.833],
-      [151.253, -33.838],
-      [151.248, -33.843],
-      [151.240, -33.840],
-      [151.237, -33.836],
-      [151.241, -33.833],
+      [151.243, -33.834],
+      [151.251, -33.834],
+      [151.253, -33.839],
+      [151.249, -33.843],
+      [151.242, -33.842],
+      [151.240, -33.837],
+      [151.243, -33.834],
     ],
     baselineHeight: 10,
     moderateHeight: 30,
@@ -799,15 +807,16 @@ export const FUTURE_DEVELOPMENT_ZONES = [
     color: '#f472b6',
   },
   {
+    // Northern gateway at The Spit — extended to catch NE harbour buildings
     id: 'the-spit-gateway',
     label: 'The Spit gateway',
     coords: [
-      [151.253, -33.807],
-      [151.263, -33.807],
-      [151.266, -33.813],
-      [151.259, -33.818],
-      [151.250, -33.813],
-      [151.253, -33.807],
+      [151.258, -33.804],
+      [151.271, -33.804],
+      [151.272, -33.812],
+      [151.264, -33.816],
+      [151.256, -33.812],
+      [151.258, -33.804],
     ],
     baselineHeight: 8,
     moderateHeight: 24,
