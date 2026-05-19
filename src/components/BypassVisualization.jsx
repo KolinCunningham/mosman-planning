@@ -97,11 +97,23 @@ function buildingColorExpr(showOption1, showOption2) {
   return '#64748b'
 }
 
+function routeBbox(routeCoords, padDeg = 0.004) {
+  const lngs = routeCoords.map(c => c[0])
+  const lats = routeCoords.map(c => c[1])
+  const w = Math.min(...lngs) - padDeg
+  const e = Math.max(...lngs) + padDeg
+  const s = Math.min(...lats) - padDeg
+  const n = Math.max(...lats) + padDeg
+  // Simple rectangle — always valid, never self-intersects
+  return [[w, s], [e, s], [e, n], [w, n], [w, s]]
+}
+
 function optionBuildingFilter(showOption2, routeCoords) {
   if (showOption2) {
     // Option 2 = High & Narrow (9% LGA, Military-Spit corridor)
-    // 600m buffer captures buildings straddling the corridor edge
-    const ring = corridorPolygon(routeCoords, 600)
+    // Use bounding box of the route — corridorPolygon() self-intersects at bends
+    // and ['within'] returns nothing against self-intersecting polygons
+    const ring = routeBbox(routeCoords, 0.004)
     return ['within', { type: 'Polygon', coordinates: [ring] }]
   }
   // Option 1 = Low & Wide (13% LGA) — show all Mosman buildings
