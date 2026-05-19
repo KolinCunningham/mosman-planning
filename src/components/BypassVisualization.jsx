@@ -8,21 +8,21 @@ const ROAD_WIDTH_M = 20
 const BYPASS_HEIGHT_M = 8.5
 const BYPASS_DECK_THICKNESS = 1.2
 
-// Corrected to follow actual Military Road (Cremorne → Mosman → Spit Junction)
+// Calibrated to follow actual Military Road (Cremorne → Mosman → Spit Junction)
 const BYPASS_ROUTE_COORDS = [
-  [151.213, -33.831],
-  [151.217, -33.830],
-  [151.220, -33.830],
-  [151.224, -33.829],
-  [151.227, -33.829],
-  [151.231, -33.828],
-  [151.234, -33.828],
-  [151.237, -33.827],
-  [151.240, -33.826],
-  [151.243, -33.825],
-  [151.245, -33.823],
-  [151.247, -33.820],
-  [151.249, -33.817],
+  [151.215448, -33.829864],
+  [151.218448, -33.83013],
+  [151.22069,  -33.830856],
+  [151.22326,  -33.831311],
+  [151.226815, -33.830175],
+  [151.228346, -33.829085],
+  [151.230643, -33.827904],
+  [151.235292, -33.824496],
+  [151.240596, -33.824405],
+  [151.24344,  -33.82277],
+  [151.244059, -33.819983],
+  [151.243414, -33.816001],
+  [151.24452,  -33.812708],
 ]
 
 const BYPASS_START = BYPASS_ROUTE_COORDS[0]
@@ -176,8 +176,8 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: BASE_STYLE,
-      center: [151.231, -33.827],
-      zoom: 13.8,
+      center: [151.230, -33.822],
+      zoom: 14.2,
       pitch: 52,
       bearing: -18,
       minZoom: 11,
