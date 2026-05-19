@@ -667,11 +667,11 @@ export default function BypassVisualization() {
           colorOn="bg-slate-700 text-white" colorOff="bg-slate-100 text-slate-600">
           {showBypass ? 'Bypass ON' : 'Bypass OFF'}
         </ToggleBtn>
-        <ToggleBtn active={showOption2} onClick={() => setShowOption2(v => !v)}
+        <ToggleBtn active={showOption2} onClick={() => { setShowOption2(v => !v); setShowOption1(false) }}
           colorOn="bg-indigo-600 text-white" colorOff="bg-slate-100 text-slate-600">
           Option 2 — High &amp; Narrow
         </ToggleBtn>
-        <ToggleBtn active={showOption1} onClick={() => setShowOption1(v => !v)}
+        <ToggleBtn active={showOption1} onClick={() => { setShowOption1(v => !v); setShowOption2(false) }}
           colorOn="bg-teal-600 text-white" colorOff="bg-slate-100 text-slate-600">
           Option 1 — Low &amp; Wide
         </ToggleBtn>
