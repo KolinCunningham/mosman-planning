@@ -90,14 +90,17 @@ function corridorPolygon(coords, halfWidthM = 11) {
 // 1F ≈ 3.3m. 4F = 13.2m → ×2.1. 8F = 26.4m → ×4.1. 15F = 49.5m → ×7.7. 20F = 66m → ×10.3. 28F = 92.4m → ×14.4
 function buildingHeightExpr(showOption1, showOption2) {
   if (showOption2) {
+    // Option 2: yellow (16-20F) is DOMINANT throughout the whole corridor (page 25)
+    // — not a gradual ramp from blue. Green/yellow from the western entry, orange/red
+    // only concentrated at Spit Junction.
     return ['*', ['get', 'height'],
       ['interpolate', ['linear'], ['get', 'centroid_lng'],
-        151.215, 2.0,   // 3-4F — light blue (Cremorne)
-        151.224, 3.0,   // 5-6F — blue (entering corridor)
-        151.230, 4.5,   // 8F — blue (Military Rd central)
-        151.236, 7.5,   // 12-14F — green (mid-corridor)
-        151.240, 10.5,  // 20F — yellow/orange (near Spit Junction)
-        151.244, 14.5,  // 26-28F — red (Spit Junction peak)
+        151.215, 5.0,   // ~10F — green (entering at Cremorne — corridor already tall)
+        151.222, 8.0,   // ~16F — yellow (established corridor body)
+        151.230, 9.0,   // ~18F — yellow (Military Rd central)
+        151.237, 11.0,  // ~22F — orange (approaching Spit Junction)
+        151.241, 13.0,  // ~26F — orange/red (near junction)
+        151.244, 14.5,  // ~28F — red (Spit Junction peak)
       ]
     ]
   }
@@ -118,16 +121,16 @@ function buildingHeightExpr(showOption1, showOption2) {
 
 function buildingColorExpr(showOption1, showOption2) {
   if (showOption2) {
-    // Option 2 masterplan colours (page 25 key):
-    // light blue=3-4F, blue=5-8F, green=9-15F, yellow=16-20F, orange=21-25F, red=26-28F
+    // Option 2 colours (page 25): yellow is the DOMINANT corridor colour.
+    // Green at western entry, yellow through most of the route,
+    // orange/red only at Spit Junction. Matches the large yellow area on page 25.
     return [
       'interpolate', ['linear'], ['get', 'centroid_lng'],
-      151.215, '#bfdbfe',  // light blue — 3-4F
-      151.224, '#3b82f6',  // blue — 5-8F
-      151.232, '#22c55e',  // green — 9-15F
-      151.237, '#eab308',  // yellow — 16-20F
-      151.241, '#f97316',  // orange — 21-25F
-      151.244, '#ef4444',  // red — 26-28F Spit Junction peak
+      151.215, '#22c55e',  // green — ~10F entering at Cremorne
+      151.222, '#eab308',  // yellow — 16-20F (dominant throughout corridor)
+      151.233, '#eab308',  // yellow — maintain through Military Rd central
+      151.238, '#f97316',  // orange — 21-25F approaching Spit Junction
+      151.242, '#ef4444',  // red — 26-28F Spit Junction peak
     ]
   }
   if (showOption1) {
