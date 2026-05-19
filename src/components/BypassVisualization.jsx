@@ -164,8 +164,20 @@ function optionBuildingFilter(showOption2, routeCoords) {
       ['<=', ['get', 'centroid_lat'], Math.max(...lats) + pad],
     ]
   }
-  // Option 1 = Low & Wide: all ~900 Mosman buildings (13% LGA, broader spread)
-  return null
+  // Option 1 = Low & Wide (13% LGA): Military Rd corridor + surrounding blocks
+  // Exclude scenic protection areas:
+  //   - Cremorne Point / far-south residential (lat < -33.836)
+  //   - Mosman Bay / Athol Wharf waterfront (lng > 151.234 AND lat < -33.824)
+  return ['all',
+    ['>=', ['get', 'centroid_lng'], 151.211],
+    ['<=', ['get', 'centroid_lng'], 151.249],
+    ['>=', ['get', 'centroid_lat'], -33.836],
+    ['<=', ['get', 'centroid_lat'], -33.808],
+    ['!', ['all',
+      ['>', ['get', 'centroid_lng'], 151.234],
+      ['<', ['get', 'centroid_lat'], -33.824],
+    ]],
+  ]
 }
 
 function updateRouteSources(map, coords) {
