@@ -75,23 +75,59 @@ function corridorPolygon(coords, halfWidthM = 11) {
   return [...left, ...right.reverse(), left[0]]
 }
 
-// Option 2: up to 28 storeys (×8 on existing ~3-floor base)
-// Option 1: up to 20 storeys (×5.5 on existing base)
+// Heights gradient west→east matching masterplan:
+// Option 2 (High & Narrow): 3F at Cremorne end → 26-28F at Spit Junction (red peak)
+// Option 1 (Low & Wide):    3F at Cremorne end → 16-20F at Spit Junction (yellow peak)
+// Gradient driven by centroid_lng added to building data.
 function buildingHeightExpr(showOption1, showOption2) {
-  if (showOption2) return ['*', ['get', 'height'], 8.0]
-  if (showOption1) return ['*', ['get', 'height'], 5.5]
+  if (showOption2) {
+    return ['*', ['get', 'height'],
+      ['interpolate', ['linear'], ['get', 'centroid_lng'],
+        151.215, 1.8,   // ~3-4F at Cremorne/Warringah Fwy end
+        151.225, 3.0,   // ~6F mid-west
+        151.232, 5.5,   // ~11F Military Rd central
+        151.238, 8.5,   // ~17-18F approaching Spit Junction
+        151.244, 13.5,  // ~26-28F at Spit Junction (red zone)
+      ]
+    ]
+  }
+  if (showOption1) {
+    return ['*', ['get', 'height'],
+      ['interpolate', ['linear'], ['get', 'centroid_lng'],
+        151.215, 1.5,   // ~3F at western edge
+        151.225, 2.5,   // ~5F mid-west
+        151.232, 4.0,   // ~8F Military Rd central
+        151.238, 5.5,   // ~11F approaching Spit Junction
+        151.244, 7.5,   // ~16-20F at Spit Junction (yellow zone)
+      ]
+    ]
+  }
   return ['get', 'height']
 }
 
 function buildingColorExpr(showOption1, showOption2) {
-  if (showOption2 || showOption1) {
+  if (showOption2) {
+    // Option 2 palette: cyan(3-4F) → blue(5-8F) → green(9-15F) → yellow(16-20F) → orange(21-25F) → red(26-28F)
+    // Driven by centroid_lng (west=short/blue, east=tall/red at Spit Junction)
     return [
-      'interpolate', ['linear'], ['get', 'height'],
-      0,  '#334155',
-      8,  '#22d3ee',
-      18, '#818cf8',
-      32, '#a78bfa',
-      50, '#f472b6',
+      'interpolate', ['linear'], ['get', 'centroid_lng'],
+      151.215, '#93c5fd',  // pale blue — 3-4F
+      151.225, '#3b82f6',  // blue — 5-8F
+      151.232, '#22c55e',  // green — 9-15F
+      151.238, '#eab308',  // yellow — 16-20F
+      151.241, '#f97316',  // orange — 21-25F
+      151.244, '#ef4444',  // red — 26-28F at Spit Junction
+    ]
+  }
+  if (showOption1) {
+    // Option 1 palette: cyan(3-4F) → blue(5-8F) → green(9-15F) → yellow(16-20F) — no orange/red
+    return [
+      'interpolate', ['linear'], ['get', 'centroid_lng'],
+      151.215, '#93c5fd',  // pale blue — 3-4F
+      151.225, '#3b82f6',  // blue — 5-8F
+      151.232, '#22c55e',  // green — 9-15F
+      151.238, '#a3e635',  // lime — 12-15F
+      151.244, '#eab308',  // yellow — 16-20F max
     ]
   }
   return '#64748b'
@@ -110,13 +146,11 @@ function routeBbox(routeCoords, padDeg = 0.004) {
 
 function optionBuildingFilter(showOption2, routeCoords) {
   if (showOption2) {
-    // Option 2 = High & Narrow (9% LGA, Military-Spit corridor)
-    // Use bounding box of the route — corridorPolygon() self-intersects at bends
-    // and ['within'] returns nothing against self-intersecting polygons
-    const ring = routeBbox(routeCoords, 0.004)
+    // Option 2 = High & Narrow: tight corridor, ~300m each side of Military/Spit Rd
+    const ring = routeBbox(routeCoords, 0.003)
     return ['within', { type: 'Polygon', coordinates: [ring] }]
   }
-  // Option 1 = Low & Wide (13% LGA) — show all Mosman buildings
+  // Option 1 = Low & Wide: all ~900 Mosman buildings (13% LGA, broader spread)
   return null
 }
 
@@ -364,7 +398,9 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
         <LegendPill color="#ef4444" label="Elevated bypass deck (8.5–11m)" />
         {(showOption2 || showOption1) && (
           <LegendPill gradient="linear-gradient(90deg,#22d3ee,#a78bfa,#f472b6)"
-            label={showOption2 ? 'Option 2 — High & Narrow (corridor, up to 28 storeys)' : 'Option 1 — Low & Wide (all Mosman, up to 20 storeys)'} />
+            label={showOption2
+            ? 'Option 2 — High & Narrow · 9% LGA · 3–28F · red=Spit Junction peak'
+            : 'Option 1 — Low & Wide · 13% LGA · 3–20F · yellow=Spit Junction peak'} />
         )}
       </div>
     </div>
