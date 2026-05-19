@@ -95,12 +95,20 @@ function buildingColorExpr(showOption1, showOption2) {
   return '#64748b'
 }
 
-function BypassMap3D({ showOption1, showOption2 }) {
+function updateRouteSources(map, coords) {
+  const routeSrc = map.getSource('bypass-route')
+  if (routeSrc) routeSrc.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: coords } })
+  const corridorSrc = map.getSource('bypass-corridor')
+  if (corridorSrc) corridorSrc.setData({ type: 'Feature', geometry: { type: 'Polygon', coordinates: [corridorPolygon(coords, 14)] } })
+}
+
+function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, onRouteChange }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const loadedRef = useRef(false)
+  const routeMarkersRef = useRef([])
+  const routeCoordsRef = useRef(null)
 
-  // Update building appearance when options change
   useEffect(() => {
     if (!loadedRef.current || !mapRef.current) return
     const map = mapRef.current
@@ -108,6 +116,46 @@ function BypassMap3D({ showOption1, showOption2 }) {
     map.setPaintProperty('bypass-buildings-extrusion', 'fill-extrusion-color', buildingColorExpr(showOption1, showOption2))
     map.setPaintProperty('bypass-buildings-extrusion', 'fill-extrusion-opacity', showOption1 || showOption2 ? 0.72 : 0.3)
   }, [showOption1, showOption2])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !loadedRef.current) return
+
+    if (routeCalibrMode) {
+      map.easeTo({ pitch: 0, bearing: 0, duration: 500 })
+      const initCoords = (routeCoords || BYPASS_ROUTE_COORDS).map(c => [...c])
+      routeCoordsRef.current = initCoords
+
+      routeMarkersRef.current = initCoords.map((coord, index) => {
+        const el = document.createElement('div')
+        el.style.cssText = [
+          'width:24px', 'height:24px', 'border-radius:50%',
+          'background:#22d3ee', 'border:2px solid #0f172a',
+          'cursor:grab', 'display:flex', 'align-items:center', 'justify-content:center',
+          'font-size:9px', 'font-weight:800', 'color:#0f172a',
+          'box-shadow:0 2px 8px rgba(0,0,0,0.5)', 'user-select:none',
+        ].join(';')
+        el.textContent = index + 1
+
+        const marker = new maplibregl.Marker({ element: el, draggable: true })
+          .setLngLat(coord)
+          .addTo(map)
+
+        marker.on('drag', () => {
+          const { lng, lat } = marker.getLngLat()
+          routeCoordsRef.current[index] = [Number(lng.toFixed(6)), Number(lat.toFixed(6))]
+          updateRouteSources(map, routeCoordsRef.current)
+          onRouteChange?.(routeCoordsRef.current.map(c => [...c]))
+        })
+
+        return marker
+      })
+    } else {
+      routeMarkersRef.current.forEach(m => m.remove())
+      routeMarkersRef.current = []
+      map.easeTo({ pitch: 52, bearing: -18, duration: 500 })
+    }
+  }, [routeCalibrMode])
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -266,7 +314,9 @@ function BypassMap3D({ showOption1, showOption2 }) {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-slate-950/50 to-transparent" />
       <div className="pointer-events-none holo-scanlines absolute inset-0" />
       <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-sm rounded-lg px-3 py-2 pointer-events-none">
-        <p className="text-xs font-bold text-red-400 uppercase tracking-widest">Overhead Bypass Route</p>
+        <p className="text-xs font-bold text-red-400 uppercase tracking-widest">
+          {routeCalibrMode ? 'Calibration mode — drag numbered handles' : 'Overhead Bypass Route'}
+        </p>
         <p className="text-xs text-slate-300 mt-0.5">Military Rd · Warringah Fwy → Spit Rd</p>
       </div>
       <div className="absolute bottom-10 left-3 flex flex-col gap-1.5 pointer-events-none">
@@ -541,6 +591,8 @@ export default function BypassVisualization() {
   const [showBypass, setShowBypass] = useState(true)
   const [showOption1, setShowOption1] = useState(false)
   const [showOption2, setShowOption2] = useState(true)
+  const [routeCalibrMode, setRouteCalibrMode] = useState(false)
+  const [routeCoords, setRouteCoords] = useState(() => BYPASS_ROUTE_COORDS.map(c => [...c]))
   const animT = useRef(0)
 
   useEffect(() => {
@@ -577,38 +629,65 @@ export default function BypassVisualization() {
         </p>
       </div>
 
-      {/* Shared toggles — control both the aerial map and the street view */}
+      {/* Shared toggles */}
       <div className="flex flex-wrap gap-2">
-        <ToggleBtn
-          active={showBypass}
-          onClick={() => setShowBypass(v => !v)}
-          colorOn="bg-slate-700 text-white"
-          colorOff="bg-slate-100 text-slate-600"
-        >
+        <ToggleBtn active={showBypass} onClick={() => setShowBypass(v => !v)}
+          colorOn="bg-slate-700 text-white" colorOff="bg-slate-100 text-slate-600">
           {showBypass ? 'Bypass ON' : 'Bypass OFF'}
         </ToggleBtn>
-
-        <ToggleBtn
-          active={showOption2}
-          onClick={() => setShowOption2(v => !v)}
-          colorOn="bg-indigo-600 text-white"
-          colorOff="bg-slate-100 text-slate-600"
-        >
+        <ToggleBtn active={showOption2} onClick={() => setShowOption2(v => !v)}
+          colorOn="bg-indigo-600 text-white" colorOff="bg-slate-100 text-slate-600">
           Option 2 — High &amp; Narrow
         </ToggleBtn>
-
-        <ToggleBtn
-          active={showOption1}
-          onClick={() => setShowOption1(v => !v)}
-          colorOn="bg-teal-600 text-white"
-          colorOff="bg-slate-100 text-slate-600"
-        >
+        <ToggleBtn active={showOption1} onClick={() => setShowOption1(v => !v)}
+          colorOn="bg-teal-600 text-white" colorOff="bg-slate-100 text-slate-600">
           Option 1 — Low &amp; Wide
+        </ToggleBtn>
+        <ToggleBtn active={routeCalibrMode} onClick={() => setRouteCalibrMode(v => !v)}
+          colorOn="bg-cyan-200 text-cyan-900" colorOff="bg-slate-100 text-slate-600">
+          {routeCalibrMode ? 'Exit route calibration' : 'Calibrate route'}
         </ToggleBtn>
       </div>
 
+      {/* Route calibration panel */}
+      {routeCalibrMode && (
+        <div className="bg-cyan-950 border border-cyan-500/30 rounded-lg px-4 py-3">
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <p className="text-xs font-bold text-cyan-200 uppercase tracking-wider">
+              Drag the numbered handles to align the route to Military Road
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                const text = JSON.stringify(routeCoords.map(c => [Number(c[0].toFixed(6)), Number(c[1].toFixed(6))]))
+                navigator.clipboard.writeText(text)
+              }}
+              className="text-xs font-semibold bg-cyan-200 text-cyan-900 px-2.5 py-1 rounded hover:bg-white flex-shrink-0"
+            >
+              Copy coords
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5 lg:grid-cols-7">
+            {routeCoords.map((coord, index) => (
+              <div key={index} className="bg-cyan-900/50 rounded px-2 py-1.5">
+                <p className="text-[10px] font-bold text-cyan-300 mb-0.5">#{index + 1}</p>
+                <p className="text-[10px] text-white font-mono leading-tight">
+                  {coord[0].toFixed(4)}<br />{coord[1].toFixed(4)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* 3D aerial map */}
-      <BypassMap3D showOption1={showOption1} showOption2={showOption2} />
+      <BypassMap3D
+        showOption1={showOption1}
+        showOption2={showOption2}
+        routeCalibrMode={routeCalibrMode}
+        routeCoords={routeCoords}
+        onRouteChange={setRouteCoords}
+      />
 
       {/* Street-level canvas */}
       <div>
