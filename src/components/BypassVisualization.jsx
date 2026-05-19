@@ -75,9 +75,11 @@ function corridorPolygon(coords, halfWidthM = 11) {
   return [...left, ...right.reverse(), left[0]]
 }
 
+// Option 2: up to 28 storeys (×8 on existing ~3-floor base)
+// Option 1: up to 20 storeys (×5.5 on existing base)
 function buildingHeightExpr(showOption1, showOption2) {
-  if (showOption2) return ['*', ['get', 'height'], 5.2]
-  if (showOption1) return ['*', ['get', 'height'], 2.8]
+  if (showOption2) return ['*', ['get', 'height'], 8.0]
+  if (showOption1) return ['*', ['get', 'height'], 5.5]
   return ['get', 'height']
 }
 
@@ -97,11 +99,12 @@ function buildingColorExpr(showOption1, showOption2) {
 
 function optionBuildingFilter(showOption2, routeCoords) {
   if (showOption2) {
-    // Option 2 = High & Narrow: buildings within ~500m corridor (wider buffer so
-    // edge buildings with vertices outside aren't excluded by ['within'])
-    const ring = corridorPolygon(routeCoords, 500)
+    // Option 2 = High & Narrow (9% LGA, Military-Spit corridor)
+    // 600m buffer captures buildings straddling the corridor edge
+    const ring = corridorPolygon(routeCoords, 600)
     return ['within', { type: 'Polygon', coordinates: [ring] }]
   }
+  // Option 1 = Low & Wide (13% LGA) — show all Mosman buildings
   return null
 }
 
@@ -197,14 +200,8 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
     map.on('load', () => {
       loadedRef.current = true
 
-      // Fit to route bounds so Military Rd is always in view
-      const lngs = BYPASS_ROUTE_COORDS.map(c => c[0])
-      const lats = BYPASS_ROUTE_COORDS.map(c => c[1])
-      map.fitBounds(
-        [[Math.min(...lngs) - 0.001, Math.min(...lats) - 0.001],
-         [Math.max(...lngs) + 0.001, Math.max(...lats) + 0.001]],
-        { padding: 80, pitch: 52, bearing: -18, duration: 800 }
-      )
+      // Fly to Military Road corridor at zoom where buildings are clearly visible
+      map.flyTo({ center: [151.230, -33.822], zoom: 14.5, pitch: 52, bearing: -18, duration: 800 })
 
       map.addSource('bypass-osm-buildings', { type: 'geojson', data: OSM_BUILDINGS })
 
@@ -355,7 +352,7 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
         <LegendPill color="#ef4444" label="Elevated bypass deck (8.5–11m)" />
         {(showOption2 || showOption1) && (
           <LegendPill gradient="linear-gradient(90deg,#22d3ee,#a78bfa,#f472b6)"
-            label={showOption2 ? 'Option 2 — High & Narrow (corridor only, ×5 height)' : 'Option 1 — Low & Wide (all Mosman, ×2.8 height)'} />
+            label={showOption2 ? 'Option 2 — High & Narrow (corridor, up to 28 storeys)' : 'Option 1 — Low & Wide (all Mosman, up to 20 storeys)'} />
         )}
       </div>
     </div>
@@ -459,8 +456,8 @@ function drawScene(ctx, W, H, showBypass, showOption1, showOption2, animT) {
     return { x: screenX, y: screenY }
   }
 
-  // Height multiplier: Option 2 = full, Option 1 = 55%, baseline = 22%
-  const heightMult = showOption2 ? 1 : showOption1 ? 0.55 : 0.22
+  // Option 2: max 28F (High & Narrow). Option 1: max 20F (Low & Wide). Baseline ~3F.
+  const heightMult = showOption2 ? 1 : showOption1 ? 0.72 : 0.22
 
   const buildingSets = [
     { buildings: LEFT_BUILDINGS,  side: -1, setback: ROAD_WIDTH_M / 2 + 2 },
@@ -732,8 +729,8 @@ export default function BypassVisualization() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
         {[
           { label: 'Bypass height', value: `${BYPASS_HEIGHT_M}m clearance` },
-          { label: 'Option 2 max', value: '28 storeys (High & Narrow)' },
-          { label: 'Option 1 max', value: '20 storeys (Low & Wide)' },
+          { label: 'Option 2 max', value: '28 storeys · 9% LGA · 60ha' },
+          { label: 'Option 1 max', value: '20 storeys · 13% LGA · 85ha' },
           { label: 'Corridor', value: 'Military / Spit Rd spine' },
         ].map(({ label, value }) => (
           <div key={label} className="bg-white rounded-lg border border-slate-200 p-3">
