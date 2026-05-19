@@ -6,10 +6,11 @@ export default {
       colors: {
         mosman: {
           pink: '#D63B6E',
-          teal: '#3DBFB8',
-          dark: '#1a1a2e',
-          card: '#16213e',
-          border: '#0f3460',
+          teal: '#2a9d8f',
+          dark: '#f8fafc',
+          card: '#ffffff',
+          border: '#f1f5f9',
+          line: '#e2e8f0',
         },
       },
     },

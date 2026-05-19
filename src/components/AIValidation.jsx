@@ -83,28 +83,28 @@ export default function AIValidation({ suggestion, onSave }) {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const ta = "w-full bg-mosman-dark border border-mosman-border rounded-lg px-3 py-2 text-slate-200 text-sm focus:outline-none focus:border-mosman-teal"
+  const ta = "w-full bg-mosman-dark border border-mosman-line rounded-lg px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-mosman-teal"
 
   return (
     <div className="space-y-4">
-      <div className="p-3 bg-mosman-dark rounded-lg border border-mosman-border text-xs text-slate-400">
+      <div className="p-3 bg-mosman-dark rounded-lg border border-mosman-line text-xs text-slate-500">
         Validates this suggestion against all 53 reference documents — Standard Drawings, DCPs, Policies, Plans of Management, LEP Amendments, Strategies. Identifies what's feasible now, what needs changing, and the give-take for each required change.
       </div>
 
       {/* API Key */}
-      <div className="bg-mosman-card border border-mosman-border rounded-xl overflow-hidden">
+      <div className="bg-white border border-mosman-line rounded-xl overflow-hidden">
         <button onClick={() => setShowKey(!showKey)}
-          className="w-full flex items-center justify-between px-4 py-3 hover:bg-mosman-border transition-colors">
+          className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-100 transition-colors">
           <div className="flex items-center gap-2">
             <Key size={14} className={apiKey ? 'text-green-400' : 'text-slate-500'} />
-            <span className="text-sm text-slate-300">
+            <span className="text-sm text-slate-700">
               {apiKey ? 'API key set ✓' : 'Anthropic API key required'}
             </span>
           </div>
           {showKey ? <ChevronUp size={14} className="text-slate-500" /> : <ChevronDown size={14} className="text-slate-500" />}
         </button>
         {showKey && (
-          <div className="px-4 pb-4 space-y-2 border-t border-mosman-border pt-3">
+          <div className="px-4 pb-4 space-y-2 border-t border-mosman-line pt-3">
             <p className="text-xs text-slate-500">Key stored locally in browser only. Never sent anywhere except Anthropic's API.</p>
             <input
               type="password"
@@ -131,7 +131,7 @@ export default function AIValidation({ suggestion, onSave }) {
         </button>
         <button
           onClick={() => setShowPrompt(!showPrompt)}
-          className="px-3 py-2 bg-mosman-border hover:bg-slate-600 text-slate-300 rounded-xl text-sm transition-colors"
+          className="px-3 py-2 bg-slate-100 hover:bg-slate-600 text-slate-700 rounded-xl text-sm transition-colors"
           title="View prompt"
         >
           {showPrompt ? 'Hide' : 'View'} Prompt
@@ -147,7 +147,7 @@ export default function AIValidation({ suggestion, onSave }) {
 
       {/* Prompt preview */}
       {showPrompt && (
-        <div className="bg-mosman-dark border border-mosman-border rounded-xl p-4 space-y-2">
+        <div className="bg-mosman-dark border border-mosman-line rounded-xl p-4 space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-xs text-slate-500 font-mono">Full validation prompt ({prompt.length.toLocaleString()} chars)</p>
             <button onClick={copyPrompt}
@@ -155,7 +155,7 @@ export default function AIValidation({ suggestion, onSave }) {
               <Copy size={11} /> {copied ? 'Copied!' : 'Copy'}
             </button>
           </div>
-          <pre className="text-xs text-slate-400 whitespace-pre-wrap max-h-48 overflow-y-auto">{prompt.slice(0, 1000)}…</pre>
+          <pre className="text-xs text-slate-500 whitespace-pre-wrap max-h-48 overflow-y-auto">{prompt.slice(0, 1000)}…</pre>
         </div>
       )}
 
@@ -165,7 +165,7 @@ export default function AIValidation({ suggestion, onSave }) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CheckCircle size={16} className="text-green-400" />
-              <span className="text-white font-semibold text-sm">Validation Complete</span>
+              <span className="text-slate-900 font-semibold text-sm">Validation Complete</span>
             </div>
             <span className="text-xs text-slate-500">
               {result.ranAt ? new Date(result.ranAt).toLocaleString('en-AU') : ''} · {result.model}
@@ -174,16 +174,16 @@ export default function AIValidation({ suggestion, onSave }) {
 
           {/* Feasibility badge */}
           {result.feasibility && (
-            <div className={`border rounded-xl px-4 py-3 ${FEASIBILITY_COLORS[result.feasibility] || 'bg-slate-800 text-slate-300 border-slate-600'}`}>
+            <div className={`border rounded-xl px-4 py-3 ${FEASIBILITY_COLORS[result.feasibility] || 'bg-slate-800 text-slate-700 border-slate-600'}`}>
               <p className="text-xs font-semibold uppercase tracking-wider opacity-70 mb-0.5">Overall Feasibility</p>
               <p className="font-bold text-lg">{result.feasibility}</p>
             </div>
           )}
 
           {/* Full result text */}
-          <div className="bg-mosman-dark border border-mosman-border rounded-xl p-4">
+          <div className="bg-mosman-dark border border-mosman-line rounded-xl p-4">
             <p className="text-xs text-slate-500 mb-2 font-mono">Full validation output</p>
-            <div className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed max-h-[600px] overflow-y-auto">
+            <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed max-h-[600px] overflow-y-auto">
               {result.text}
             </div>
           </div>
@@ -191,7 +191,7 @@ export default function AIValidation({ suggestion, onSave }) {
           <button
             onClick={runValidation}
             disabled={loading}
-            className="flex items-center gap-2 text-xs text-slate-400 hover:text-mosman-teal transition-colors"
+            className="flex items-center gap-2 text-xs text-slate-500 hover:text-mosman-teal transition-colors"
           >
             <RefreshCw size={11} /> Re-run validation
           </button>

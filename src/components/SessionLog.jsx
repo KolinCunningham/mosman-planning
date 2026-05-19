@@ -29,11 +29,11 @@ export default function SessionLog() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-white">Session Log</h2>
-          <p className="text-slate-400 text-sm">{suggestions.length} suggestions · {mapChanges.length} map changes</p>
+          <p className="text-slate-500 text-sm">{suggestions.length} suggestions · {mapChanges.length} map changes</p>
         </div>
         <div className="flex gap-2">
           <button onClick={exportAll}
-            className="flex items-center gap-2 bg-mosman-border hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm">
+            className="flex items-center gap-2 bg-slate-100 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm">
             <Download size={14} /> Export JSON
           </button>
           <button onClick={clearAll}
@@ -105,9 +105,9 @@ export default function SessionLog() {
 
 function Section({ title, children }) {
   return (
-    <div className="bg-mosman-card border border-mosman-border rounded-xl overflow-hidden">
-      <div className="px-4 py-2.5 border-b border-mosman-border">
-        <h3 className="text-slate-300 font-semibold text-sm">{title}</h3>
+    <div className="bg-white border border-mosman-line rounded-xl overflow-hidden">
+      <div className="px-4 py-2.5 border-b border-mosman-line">
+        <h3 className="text-slate-700 font-semibold text-sm">{title}</h3>
       </div>
       <div className="p-4">{children}</div>
     </div>
@@ -125,7 +125,7 @@ function EmptyState({ msg, action, actionLabel }) {
 
 function StatusBadge({ status }) {
   const colors = {
-    DRAFT: 'bg-slate-700 text-slate-300',
+    DRAFT: 'bg-slate-700 text-slate-700',
     AUDITED: 'bg-blue-900 text-blue-300',
     DWG_PENDING: 'bg-yellow-900 text-yellow-300',
     DWG_COMPLETE: 'bg-green-900 text-green-300',

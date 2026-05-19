@@ -52,15 +52,15 @@ export default function MapChangeForm() {
     setTimeout(() => navigate('/log'), 800)
   }
 
-  const ta = "w-full bg-mosman-dark border border-mosman-border rounded-lg px-3 py-2 text-slate-200 text-sm focus:outline-none focus:border-mosman-teal resize-none"
-  const inp = "w-full bg-mosman-dark border border-mosman-border rounded-lg px-3 py-2 text-slate-200 text-sm focus:outline-none focus:border-mosman-teal"
+  const ta = "w-full bg-white border border-mosman-line rounded-lg px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-mosman-teal resize-none"
+  const inp = "w-full bg-white border border-mosman-line rounded-lg px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-mosman-teal"
 
   return (
     <div className="max-w-3xl mx-auto space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-white">Propose Map Change</h2>
-          <p className="text-slate-400 text-sm">Suggest modifications to LEP maps — triggers full audit</p>
+          <p className="text-slate-500 text-sm">Suggest modifications to LEP maps — triggers full audit</p>
         </div>
         <button onClick={handleSave}
           className="flex items-center gap-2 bg-mosman-pink hover:bg-pink-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">
@@ -73,17 +73,17 @@ export default function MapChangeForm() {
       <Section title="Identification">
         <div className="grid grid-cols-2 gap-4">
           <div className="col-span-2 space-y-1">
-            <label className="text-slate-300 text-sm font-medium">Change Title</label>
+            <label className="text-slate-700 text-sm font-medium">Change Title</label>
             <input className={inp} value={form.title} onChange={e => set('title', e.target.value)} placeholder="Short descriptive title" />
           </div>
           <div className="space-y-1">
-            <label className="text-slate-300 text-sm font-medium">Status</label>
+            <label className="text-slate-700 text-sm font-medium">Status</label>
             <select className={inp} value={form.status} onChange={e => set('status', e.target.value)}>
               {STATUSES.map(s => <option key={s}>{s}</option>)}
             </select>
           </div>
           <div className="space-y-1">
-            <label className="text-slate-300 text-sm font-medium">DWG File Path</label>
+            <label className="text-slate-700 text-sm font-medium">DWG File Path</label>
             <input className={inp} value={form.dwgFile} onChange={e => set('dwgFile', e.target.value)} placeholder="map-changes/DWG/filename.dwg" />
           </div>
         </div>
@@ -98,7 +98,7 @@ export default function MapChangeForm() {
               className={`px-3 py-1.5 rounded font-mono text-sm font-bold transition-colors ${
                 form.mapsAffected.includes(code)
                   ? 'bg-mosman-pink text-white'
-                  : 'bg-mosman-dark border border-mosman-border text-slate-400 hover:text-white'
+                  : 'bg-mosman-dark border border-mosman-line text-slate-500 hover:text-white'
               }`}>
               {code}
               <span className="font-normal text-xs ml-1 opacity-70">{MAP_TYPES[code].name.split(' ').slice(0,2).join(' ')}</span>
@@ -110,7 +110,7 @@ export default function MapChangeForm() {
       {/* Affected area */}
       <Section title="Affected Area">
         <div className="space-y-1">
-          <label className="text-slate-300 text-sm font-medium">Precise Boundary Description</label>
+          <label className="text-slate-700 text-sm font-medium">Precise Boundary Description</label>
           <p className="text-xs text-slate-500">Use street names, lot/DP numbers, and cardinal boundaries</p>
           <textarea className={ta} rows={3} value={form.affectedArea} onChange={e => set('affectedArea', e.target.value)}
             placeholder="e.g. Bounded by Military Rd to north, Myahgah Rd to east, Spit Rd to south, Holt Ave to west" />
@@ -136,7 +136,7 @@ export default function MapChangeForm() {
                 ['Min Lot Size', 'currentLot', 'proposedLot', 'e.g. 550sqm', 'e.g. 400sqm'],
               ].map(([label, curKey, proKey, curPh, proPh]) => (
                 <tr key={label}>
-                  <td className="text-slate-400 py-1.5 pr-4 whitespace-nowrap">{label}</td>
+                  <td className="text-slate-500 py-1.5 pr-4 whitespace-nowrap">{label}</td>
                   <td className="pr-4 py-1.5">
                     <input className={inp} value={form[curKey]} onChange={e => set(curKey, e.target.value)} placeholder={curPh} />
                   </td>
@@ -149,12 +149,12 @@ export default function MapChangeForm() {
           </table>
         </div>
         <div className="mt-3 space-y-1">
-          <label className="text-slate-300 text-sm font-medium">Dwelling Yield Impact</label>
+          <label className="text-slate-700 text-sm font-medium">Dwelling Yield Impact</label>
           <p className="text-xs text-slate-500">Estimate additional dwellings. Show working: (site area × FSR uplift) ÷ avg apartment size</p>
           <textarea className={ta} rows={2} value={form.dwellingYield} onChange={e => set('dwellingYield', e.target.value)} />
         </div>
         <div className="mt-3 space-y-1">
-          <label className="text-slate-300 text-sm font-medium">Legal Pathway</label>
+          <label className="text-slate-700 text-sm font-medium">Legal Pathway</label>
           <p className="text-xs text-slate-500">Planning Proposal → Gateway Determination → Exhibition → Finalisation (~12–20 months)</p>
           <textarea className={ta} rows={2} value={form.legalPathway} onChange={e => set('legalPathway', e.target.value)} />
         </div>
@@ -169,7 +169,7 @@ export default function MapChangeForm() {
               <input type="checkbox" className="accent-mosman-teal"
                 checked={form.consistency[layer] || false}
                 onChange={e => setNested('consistency', layer, e.target.checked)} />
-              <span className={`text-sm ${form.consistency[layer] ? 'text-green-300 line-through opacity-60' : 'text-slate-300'}`}>
+              <span className={`text-sm ${form.consistency[layer] ? 'text-green-300 line-through opacity-60' : 'text-slate-700'}`}>
                 {layer}
               </span>
             </label>
@@ -185,7 +185,7 @@ export default function MapChangeForm() {
               <input type="checkbox" className="mt-0.5 accent-mosman-teal flex-shrink-0"
                 checked={form.auditChecks[item] || false}
                 onChange={e => setNested('auditChecks', item, e.target.checked)} />
-              <span className={`text-sm ${form.auditChecks[item] ? 'text-green-300 line-through opacity-60' : 'text-slate-300'}`}>
+              <span className={`text-sm ${form.auditChecks[item] ? 'text-green-300 line-through opacity-60' : 'text-slate-700'}`}>
                 {item}
               </span>
             </label>
@@ -194,7 +194,7 @@ export default function MapChangeForm() {
       </Section>
 
       <div className="space-y-1">
-        <label className="text-slate-300 text-sm font-medium">Notes</label>
+        <label className="text-slate-700 text-sm font-medium">Notes</label>
         <textarea className={ta} rows={3} value={form.notes} onChange={e => set('notes', e.target.value)} />
       </div>
 
@@ -212,8 +212,8 @@ export default function MapChangeForm() {
 
 function Section({ title, children }) {
   return (
-    <div className="bg-mosman-card border border-mosman-border rounded-xl overflow-hidden">
-      <div className="px-4 py-2.5 border-b border-mosman-border">
+    <div className="bg-white border border-mosman-line rounded-xl overflow-hidden">
+      <div className="px-4 py-2.5 border-b border-mosman-line">
         <h3 className="text-mosman-teal font-semibold text-sm">{title}</h3>
       </div>
       <div className="p-4 space-y-3">{children}</div>

@@ -1,0 +1,458 @@
+import { useEffect, useRef, useState } from 'react'
+
+const FLOORS_PER_METRE = 3.3
+const ROAD_WIDTH_M = 20
+const BYPASS_HEIGHT_M = 8.5
+const BYPASS_DECK_THICKNESS = 1.2
+
+// Buildings along Military Rd corridor (Option 2 — High & Narrow, up to 28 storeys)
+const LEFT_BUILDINGS = [
+  { label: 'Spit Junction Tower', floors: 28, widthM: 22, offsetM: 0 },
+  { label: 'Mixed-Use Block', floors: 18, widthM: 18, offsetM: 26 },
+  { label: 'Residential', floors: 12, widthM: 14, offsetM: 48 },
+  { label: 'Residential', floors: 8, widthM: 16, offsetM: 66 },
+  { label: 'Terrace Row', floors: 4, widthM: 30, offsetM: 86 },
+  { label: 'Heritage', floors: 3, widthM: 12, offsetM: 120 },
+  { label: 'Retail/Res', floors: 6, widthM: 18, offsetM: 136 },
+  { label: 'Townhouse', floors: 3, widthM: 22, offsetM: 158 },
+]
+
+const RIGHT_BUILDINGS = [
+  { label: 'Gateway Tower', floors: 24, widthM: 20, offsetM: 0 },
+  { label: 'Mixed-Use', floors: 16, widthM: 16, offsetM: 24 },
+  { label: 'Apartments', floors: 14, widthM: 18, offsetM: 44 },
+  { label: 'Medium Density', floors: 10, widthM: 20, offsetM: 66 },
+  { label: 'Retail Strip', floors: 5, widthM: 28, offsetM: 90 },
+  { label: 'Residential', floors: 7, widthM: 14, offsetM: 122 },
+  { label: 'Heritage Item', floors: 2, widthM: 10, offsetM: 140 },
+  { label: 'Townhouse', floors: 3, widthM: 20, offsetM: 154 },
+]
+
+function drawScene(ctx, W, H, showBypass, showOption2, animT) {
+  ctx.clearRect(0, 0, W, H)
+
+  // Sky gradient
+  const sky = ctx.createLinearGradient(0, 0, 0, H * 0.62)
+  sky.addColorStop(0, '#e0f2fe')
+  sky.addColorStop(0.6, '#bae6fd')
+  sky.addColorStop(1, '#f0f9ff')
+  ctx.fillStyle = sky
+  ctx.fillRect(0, 0, W, H)
+
+  // Perspective setup
+  const vp = { x: W / 2, y: H * 0.42 }   // vanishing point
+  const groundY = H * 0.82
+  const nearRoadHalfW = W * 0.36
+  const farRoadHalfW = 18
+
+  // Road surface
+  ctx.beginPath()
+  ctx.moveTo(vp.x - farRoadHalfW, vp.y)
+  ctx.lineTo(vp.x + farRoadHalfW, vp.y)
+  ctx.lineTo(vp.x + nearRoadHalfW, groundY)
+  ctx.lineTo(vp.x - nearRoadHalfW, groundY)
+  ctx.closePath()
+  const roadGrad = ctx.createLinearGradient(0, vp.y, 0, groundY)
+  roadGrad.addColorStop(0, '#94a3b8')
+  roadGrad.addColorStop(1, '#64748b')
+  ctx.fillStyle = roadGrad
+  ctx.fill()
+
+  // Road lane markings
+  ctx.save()
+  ctx.strokeStyle = '#fff'
+  ctx.setLineDash([18, 14])
+  ctx.lineWidth = 2.5
+  ;[0].forEach(() => {
+    ctx.beginPath()
+    ctx.moveTo(vp.x, vp.y + 1)
+    ctx.lineTo(vp.x, groundY)
+    ctx.stroke()
+  })
+  ctx.restore()
+
+  // Footpaths
+  const fpW = 0.08
+  ;[-1, 1].forEach(side => {
+    const nearEdge = side * nearRoadHalfW
+    const farEdge = side * farRoadHalfW
+    const nearPath = side * (nearRoadHalfW + W * fpW)
+    const farPath = side * (farRoadHalfW + 8)
+
+    ctx.beginPath()
+    ctx.moveTo(vp.x + farEdge, vp.y)
+    ctx.lineTo(vp.x + farPath, vp.y)
+    ctx.lineTo(vp.x + nearPath, groundY)
+    ctx.lineTo(vp.x + nearEdge, groundY)
+    ctx.closePath()
+    const fpGrad = ctx.createLinearGradient(0, vp.y, 0, groundY)
+    fpGrad.addColorStop(0, '#cbd5e1')
+    fpGrad.addColorStop(1, '#e2e8f0')
+    ctx.fillStyle = fpGrad
+    ctx.fill()
+  })
+
+  // Helper: perspective project a world point
+  // worldX = lateral metres from road centre, worldY = height metres, worldZ = depth metres (0=near, 200=far)
+  const totalDepth = 200
+  function proj(worldX, worldY, worldZ) {
+    const t = worldZ / totalDepth   // 0 = near, 1 = far
+    const screenX = vp.x + worldX * (nearRoadHalfW + W * fpW) / ROAD_WIDTH_M * 2 * (1 - t) +
+      worldX * farRoadHalfW / ROAD_WIDTH_M * 2 * t
+    const baseY = groundY + (vp.y - groundY) * t
+    const scaleY = (1 - t) + t * (farRoadHalfW / (nearRoadHalfW + W * fpW))
+    const screenY = baseY - worldY * (groundY - vp.y) / 28 * scaleY * 2.1
+    return { x: screenX, y: screenY }
+  }
+
+  // Draw buildings
+  const buildingSets = [
+    { buildings: LEFT_BUILDINGS, side: -1, setback: ROAD_WIDTH_M / 2 + 2 },
+    { buildings: RIGHT_BUILDINGS, side: 1, setback: ROAD_WIDTH_M / 2 + 2 },
+  ]
+
+  buildingSets.forEach(({ buildings, side, setback }) => {
+    buildings.forEach(b => {
+      const floors = showOption2 ? b.floors : Math.max(2, Math.round(b.floors * 0.22))
+      const heightM = floors * FLOORS_PER_METRE
+      const z0 = b.offsetM
+      const z1 = b.offsetM + b.widthM
+      const x0 = side * setback
+      const x1 = side * (setback + 12)
+
+      const bl = proj(x0, 0, z0)
+      const br = proj(x1, 0, z0)
+      const tr = proj(x1, heightM, z0)
+      const tl = proj(x0, heightM, z0)
+      const blF = proj(x0, 0, z1)
+      const brF = proj(x1, 0, z1)
+      const trF = proj(x1, heightM, z1)
+      const tlF = proj(x0, heightM, z1)
+
+      // Hue based on height
+      const hue = 200 + floors * 3
+      const sat = 30 + floors * 0.8
+      const light = showOption2 ? 52 - floors * 0.4 : 72
+
+      // Front face
+      ctx.beginPath()
+      ctx.moveTo(bl.x, bl.y)
+      ctx.lineTo(br.x, br.y)
+      ctx.lineTo(tr.x, tr.y)
+      ctx.lineTo(tl.x, tl.y)
+      ctx.closePath()
+      const faceGrad = ctx.createLinearGradient(0, tl.y, 0, bl.y)
+      faceGrad.addColorStop(0, `hsl(${hue},${sat}%,${light - 6}%)`)
+      faceGrad.addColorStop(1, `hsl(${hue},${sat - 10}%,${light + 8}%)`)
+      ctx.fillStyle = faceGrad
+      ctx.fill()
+      ctx.strokeStyle = `hsl(${hue},${sat}%,${light - 18}%)`
+      ctx.lineWidth = 0.8
+      ctx.stroke()
+
+      // Side face (far)
+      ctx.beginPath()
+      ctx.moveTo(br.x, br.y)
+      ctx.lineTo(brF.x, brF.y)
+      ctx.lineTo(trF.x, trF.y)
+      ctx.lineTo(tr.x, tr.y)
+      ctx.closePath()
+      ctx.fillStyle = `hsl(${hue},${sat - 8}%,${light - 12}%)`
+      ctx.fill()
+      ctx.strokeStyle = `hsl(${hue},${sat}%,${light - 22}%)`
+      ctx.lineWidth = 0.6
+      ctx.stroke()
+
+      // Roof
+      ctx.beginPath()
+      ctx.moveTo(tl.x, tl.y)
+      ctx.lineTo(tr.x, tr.y)
+      ctx.lineTo(trF.x, trF.y)
+      ctx.lineTo(tlF.x, tlF.y)
+      ctx.closePath()
+      ctx.fillStyle = `hsl(${hue},${sat - 5}%,${light + 2}%)`
+      ctx.fill()
+
+      // Windows (front face only, >2 floors)
+      if (floors > 3) {
+        const winCols = Math.max(1, Math.floor(12 / 3.5))
+        const winRows = Math.min(floors - 1, 8)
+        for (let r = 0; r < winRows; r++) {
+          for (let c = 0; c < winCols; c++) {
+            const wx = side > 0 ? br.x + (tl.x - bl.x) * ((c + 0.5) / winCols) * 0.6 :
+              bl.x + (tr.x - br.x) * ((c + 0.5) / winCols) * 0.6
+            const wy = bl.y - (bl.y - tl.y) * ((r + 0.8) / (winRows + 1))
+            const ws = Math.max(2, (br.y - tr.y) / winRows * 0.38)
+            const isLit = (Math.sin(c * 7 + r * 13 + floors) > 0.2)
+            ctx.fillStyle = isLit
+              ? `rgba(255,245,200,${0.55 + 0.3 * Math.sin(animT * 0.9 + c + r)})`
+              : 'rgba(100,130,160,0.55)'
+            ctx.fillRect(wx - ws * 0.5, wy - ws * 0.7, ws, ws * 1.2)
+          }
+        }
+      }
+
+      // Floor label on tallest buildings
+      if (floors >= 12 && showOption2) {
+        const labelP = proj(side * (setback + 6), heightM + 4, b.offsetM + b.widthM / 2)
+        ctx.font = `bold ${Math.max(9, 11 - b.offsetM / 25)}px sans-serif`
+        ctx.fillStyle = '#1e3a5f'
+        ctx.textAlign = 'center'
+        ctx.fillText(`${floors}F`, labelP.x, labelP.y)
+      }
+    })
+  })
+
+  // Street trees
+  ;[-1, 1].forEach(side => {
+    for (let z = 10; z < 180; z += 22) {
+      const x = side * (ROAD_WIDTH_M / 2 + 5)
+      const trunkBase = proj(x, 0, z)
+      const trunkTop = proj(x, 5, z)
+      const canopy = proj(x, 9, z)
+      const scale = 1 - z / 280
+
+      ctx.strokeStyle = '#6b4c26'
+      ctx.lineWidth = Math.max(1, 3 * scale)
+      ctx.beginPath()
+      ctx.moveTo(trunkBase.x, trunkBase.y)
+      ctx.lineTo(trunkTop.x, trunkTop.y)
+      ctx.stroke()
+
+      ctx.beginPath()
+      ctx.arc(canopy.x, canopy.y, Math.max(4, 22 * scale), 0, Math.PI * 2)
+      ctx.fillStyle = `rgba(34,197,94,${0.55 + scale * 0.3})`
+      ctx.fill()
+    }
+  })
+
+  // Overhead bypass structure
+  if (showBypass) {
+    const bypassLanes = 2
+    const deckW = ROAD_WIDTH_M * 0.72
+
+    // Piers
+    for (let z = 25; z < 180; z += 35) {
+      ;[-1, 1].forEach(side => {
+        const pierX = side * deckW * 0.44
+        const base = proj(pierX, 0, z)
+        const cap = proj(pierX, BYPASS_HEIGHT_M, z)
+        ctx.strokeStyle = '#94a3b8'
+        ctx.lineWidth = Math.max(2, 8 * (1 - z / 250))
+        ctx.beginPath()
+        ctx.moveTo(base.x, base.y)
+        ctx.lineTo(cap.x, cap.y)
+        ctx.stroke()
+      })
+
+      // Cross beam
+      const leftCap = proj(-deckW * 0.44, BYPASS_HEIGHT_M, z)
+      const rightCap = proj(deckW * 0.44, BYPASS_HEIGHT_M, z)
+      ctx.strokeStyle = '#64748b'
+      ctx.lineWidth = Math.max(3, 10 * (1 - z / 250))
+      ctx.beginPath()
+      ctx.moveTo(leftCap.x, leftCap.y)
+      ctx.lineTo(rightCap.x, rightCap.y)
+      ctx.stroke()
+    }
+
+    // Deck surface (bottom of slab)
+    const zSteps = 60
+    for (let i = 0; i < zSteps; i++) {
+      const z0 = (i / zSteps) * 190
+      const z1 = ((i + 1) / zSteps) * 190
+      const deckH = BYPASS_HEIGHT_M
+      const deckBot = deckH - BYPASS_DECK_THICKNESS
+
+      const ll = proj(-deckW / 2, deckH, z0)
+      const lr = proj(deckW / 2, deckH, z0)
+      const rl = proj(-deckW / 2, deckH, z1)
+      const rr = proj(deckW / 2, deckH, z1)
+
+      const t = i / zSteps
+      ctx.beginPath()
+      ctx.moveTo(ll.x, ll.y)
+      ctx.lineTo(lr.x, lr.y)
+      ctx.lineTo(rr.x, rr.y)
+      ctx.lineTo(rl.x, rl.y)
+      ctx.closePath()
+      ctx.fillStyle = `rgba(148,163,184,${0.82 - t * 0.25})`
+      ctx.fill()
+
+      // Bottom of deck (underside shadow)
+      const llb = proj(-deckW / 2, deckBot, z0)
+      const lrb = proj(deckW / 2, deckBot, z0)
+      const rlb = proj(-deckW / 2, deckBot, z1)
+      const rrb = proj(deckW / 2, deckBot, z1)
+      ctx.beginPath()
+      ctx.moveTo(llb.x, llb.y)
+      ctx.lineTo(lrb.x, lrb.y)
+      ctx.lineTo(rrb.x, rrb.y)
+      ctx.lineTo(rlb.x, rlb.y)
+      ctx.closePath()
+      ctx.fillStyle = `rgba(51,65,85,${0.6 - t * 0.2})`
+      ctx.fill()
+    }
+
+    // Bypass deck lane markings
+    for (let z = 8; z < 185; z += 20) {
+      const near = proj(0, BYPASS_HEIGHT_M + 0.05, z)
+      const far = proj(0, BYPASS_HEIGHT_M + 0.05, z + 10)
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)'
+      ctx.lineWidth = 1.5
+      ctx.setLineDash([0])
+      ctx.beginPath()
+      ctx.moveTo(near.x, near.y)
+      ctx.lineTo(far.x, far.y)
+      ctx.stroke()
+    }
+
+    // Bypass guardrail
+    ;[-1, 1].forEach(side => {
+      ctx.beginPath()
+      const railH = BYPASS_HEIGHT_M + 1.1
+      let first = true
+      for (let z = 0; z < 190; z += 5) {
+        const p = proj(side * deckW / 2, railH, z)
+        first ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)
+        first = false
+      }
+      ctx.strokeStyle = '#cbd5e1'
+      ctx.lineWidth = 2
+      ctx.stroke()
+    })
+
+    // Label
+    const labelPos = proj(0, BYPASS_HEIGHT_M + 3.5, 40)
+    ctx.font = 'bold 13px sans-serif'
+    ctx.fillStyle = '#1e40af'
+    ctx.textAlign = 'center'
+    ctx.fillText('Military Rd Overhead Bypass', labelPos.x, labelPos.y)
+  }
+
+  // Ground-level bypass shadow cast under deck
+  if (showBypass) {
+    ctx.save()
+    ctx.globalAlpha = 0.22
+    ctx.beginPath()
+    const sl = proj(-deckW * 0.5, 0, 0)
+    const sr = proj(deckW * 0.5, 0, 0)
+    const slF = proj(-deckW * 0.5, 0, 190)
+    const srF = proj(deckW * 0.5, 0, 190)
+    ctx.moveTo(sl.x, sl.y)
+    ctx.lineTo(sr.x, sr.y)
+    ctx.lineTo(srF.x, srF.y)
+    ctx.lineTo(slF.x, slF.y)
+    ctx.closePath()
+    ctx.fillStyle = '#334155'
+    ctx.fill()
+    ctx.restore()
+  }
+
+  // Foreground road markings & curbs
+  ctx.fillStyle = '#e2e8f0'
+  ctx.fillRect(vp.x - nearRoadHalfW - 4, groundY - 4, 8, H - groundY + 8)
+  ctx.fillRect(vp.x + nearRoadHalfW - 4, groundY - 4, 8, H - groundY + 8)
+}
+
+// Store a reference to deckW for shadow — hoist it
+let deckW = ROAD_WIDTH_M * 0.72
+
+export default function BypassVisualization() {
+  const canvasRef = useRef(null)
+  const animRef = useRef(null)
+  const [showBypass, setShowBypass] = useState(true)
+  const [showOption2, setShowOption2] = useState(true)
+  const animT = useRef(0)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    function resize() {
+      canvas.width = canvas.offsetWidth * window.devicePixelRatio
+      canvas.height = canvas.offsetHeight * window.devicePixelRatio
+      const ctx = canvas.getContext('2d')
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
+    }
+
+    resize()
+    window.addEventListener('resize', resize)
+
+    function loop() {
+      animT.current += 0.012
+      const ctx = canvas.getContext('2d')
+      const W = canvas.offsetWidth
+      const H = canvas.offsetHeight
+      drawScene(ctx, W, H, showBypass, showOption2, animT.current)
+      animRef.current = requestAnimationFrame(loop)
+    }
+
+    animRef.current = requestAnimationFrame(loop)
+
+    return () => {
+      cancelAnimationFrame(animRef.current)
+      window.removeEventListener('resize', resize)
+    }
+  }, [showBypass, showOption2])
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-xl font-bold text-slate-900">Military Road Overhead Bypass</h2>
+        <p className="text-sm text-slate-500 mt-1">
+          Street-level perspective — Option 2 (High &amp; Narrow, up to 28 storeys) with elevated bypass structure
+        </p>
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={() => setShowBypass(v => !v)}
+          className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+            showBypass ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+          }`}
+        >
+          {showBypass ? 'Bypass ON' : 'Bypass OFF'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowOption2(v => !v)}
+          className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+            showOption2 ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+          }`}
+        >
+          {showOption2 ? 'Option 2 Heights' : 'Current Heights'}
+        </button>
+      </div>
+
+      <div className="rounded-xl overflow-hidden border border-slate-200 shadow-lg bg-sky-100">
+        <canvas
+          ref={canvasRef}
+          className="w-full"
+          style={{ height: '520px', display: 'block' }}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+        {[
+          { label: 'Bypass height', value: `${BYPASS_HEIGHT_M}m clearance` },
+          { label: 'Max tower', value: '28 storeys (Option 2)' },
+          { label: 'Corridor', value: 'Military / Spit Rd spine' },
+          { label: 'Zone', value: 'High & Narrow — 9% LGA' },
+        ].map(({ label, value }) => (
+          <div key={label} className="bg-white rounded-lg border border-slate-200 p-3">
+            <p className="text-slate-400 uppercase tracking-wide text-[10px] font-semibold">{label}</p>
+            <p className="font-semibold text-slate-800 mt-0.5">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
+        <strong>Note:</strong> Overhead bypass is a concept illustration only — not part of the Mosman Masterplan
+        or any current Council proposal. Shown here to visualise how an elevated road could interact with the
+        Option 2 building heights along the Military Road corridor.
+      </div>
+    </div>
+  )
+}

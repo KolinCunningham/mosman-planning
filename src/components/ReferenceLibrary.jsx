@@ -27,7 +27,7 @@ export default function ReferenceLibrary() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-white">Reference Library</h2>
-          <p className="text-slate-400 text-sm">{REFERENCE_DOCS.length} documents — Standard Drawings, DCPs, Policies, Plans of Management</p>
+          <p className="text-slate-500 text-sm">{REFERENCE_DOCS.length} documents — Standard Drawings, DCPs, Policies, Plans of Management</p>
         </div>
       </div>
 
@@ -39,7 +39,7 @@ export default function ReferenceLibrary() {
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search documents…"
-            className="w-full bg-mosman-dark border border-mosman-border rounded-lg pl-9 pr-3 py-2 text-slate-200 text-sm focus:outline-none focus:border-mosman-teal"
+            className="w-full bg-mosman-dark border border-mosman-line rounded-lg pl-9 pr-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-mosman-teal"
           />
         </div>
       </div>
@@ -48,7 +48,7 @@ export default function ReferenceLibrary() {
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setActiveCategory('ALL')}
-          className={`px-3 py-1 rounded text-xs font-medium transition-colors ${activeCategory === 'ALL' ? 'bg-slate-500 text-white' : 'bg-mosman-dark border border-mosman-border text-slate-400 hover:text-white'}`}>
+          className={`px-3 py-1 rounded text-xs font-medium transition-colors ${activeCategory === 'ALL' ? 'bg-slate-500 text-white' : 'bg-mosman-dark border border-mosman-line text-slate-500 hover:text-white'}`}>
           All ({REFERENCE_DOCS.length})
         </button>
         {Object.entries(DOC_CATEGORIES).map(([key, cat]) => {
@@ -56,7 +56,7 @@ export default function ReferenceLibrary() {
           return (
             <button key={key}
               onClick={() => setActiveCategory(activeCategory === key ? 'ALL' : key)}
-              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${activeCategory === key ? `${cat.color} text-white` : 'bg-mosman-dark border border-mosman-border text-slate-400 hover:text-white'}`}>
+              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${activeCategory === key ? `${cat.color} text-white` : 'bg-mosman-dark border border-mosman-line text-slate-500 hover:text-white'}`}>
               {cat.label} ({count})
             </button>
           )
@@ -67,18 +67,18 @@ export default function ReferenceLibrary() {
       {Object.entries(grouped).map(([catKey, docs]) => {
         const cat = DOC_CATEGORIES[catKey]
         return (
-          <div key={catKey} className="bg-mosman-card border border-mosman-border rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-mosman-border flex items-center gap-3">
+          <div key={catKey} className="bg-white border border-mosman-line rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-mosman-line flex items-center gap-3">
               <span className={`${cat.color} text-white text-xs font-bold px-2 py-1 rounded`}>{docs.length}</span>
               <div>
-                <p className="text-white font-semibold text-sm">{cat.label}</p>
+                <p className="text-slate-900 font-semibold text-sm">{cat.label}</p>
                 <p className="text-slate-500 text-xs">{cat.desc}</p>
               </div>
             </div>
             <div className="divide-y divide-mosman-border">
               {docs.map(doc => (
                 <button key={doc.id} onClick={() => setSelected(doc)}
-                  className="w-full text-left px-4 py-3 hover:bg-mosman-border transition-colors flex items-start gap-3 group">
+                  className="w-full text-left px-4 py-3 hover:bg-slate-100 transition-colors flex items-start gap-3 group">
                   <BookOpen size={14} className="text-slate-500 flex-shrink-0 mt-0.5 group-hover:text-mosman-teal transition-colors" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -87,7 +87,7 @@ export default function ReferenceLibrary() {
                           {doc.code}
                         </span>
                       )}
-                      <span className="text-slate-200 text-sm font-medium">{doc.title}</span>
+                      <span className="text-slate-800 text-sm font-medium">{doc.title}</span>
                       {doc.date && <span className="text-xs text-slate-600">{doc.date}</span>}
                       {doc.rev && <span className="text-xs text-slate-600 font-mono">{doc.rev}</span>}
                     </div>
@@ -104,15 +104,15 @@ export default function ReferenceLibrary() {
       })}
 
       {filtered.length === 0 && (
-        <div className="bg-mosman-card border border-mosman-border rounded-xl p-10 text-center">
-          <p className="text-slate-400">No documents match "{query}"</p>
+        <div className="bg-white border border-mosman-line rounded-xl p-10 text-center">
+          <p className="text-slate-500">No documents match "{query}"</p>
         </div>
       )}
 
       {/* PDF Viewer Modal */}
       {selected && (
         <div className="fixed inset-0 z-50 bg-black/80 flex flex-col">
-          <div className="bg-mosman-card border-b border-mosman-border px-4 py-3 flex items-center justify-between">
+          <div className="bg-mosman-card border-b border-mosman-line px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               {selected.code && (
                 <span className={`${DOC_CATEGORIES[selected.category]?.color} text-white text-xs font-mono font-bold px-2 py-1 rounded`}>
@@ -122,7 +122,7 @@ export default function ReferenceLibrary() {
               <div>
                 <p className="text-white font-semibold">{selected.title}</p>
                 {selected.relevance && (
-                  <p className="text-xs text-slate-400 mt-0.5 max-w-2xl">{selected.relevance}</p>
+                  <p className="text-xs text-slate-500 mt-0.5 max-w-2xl">{selected.relevance}</p>
                 )}
               </div>
             </div>
@@ -131,7 +131,7 @@ export default function ReferenceLibrary() {
                 className="flex items-center gap-1 text-xs text-mosman-teal hover:underline">
                 <ExternalLink size={12} /> New tab
               </a>
-              <button onClick={() => setSelected(null)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setSelected(null)} className="text-slate-500 hover:text-white">
                 <X size={20} />
               </button>
             </div>
