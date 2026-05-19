@@ -1,11 +1,297 @@
 import { useEffect, useRef, useState } from 'react'
+import maplibregl from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
+import { OSM_BUILDINGS } from '../data/osmBuildings'
 
 const FLOORS_PER_METRE = 3.3
 const ROAD_WIDTH_M = 20
 const BYPASS_HEIGHT_M = 8.5
 const BYPASS_DECK_THICKNESS = 1.2
 
-// Buildings along Military Rd corridor (Option 2 — High & Narrow, up to 28 storeys)
+// Bypass route: Warringah Fwy west → Military Rd → Spit Junction → Spit Rd north
+const BYPASS_ROUTE_COORDS = [
+  [151.211, -33.828],
+  [151.217, -33.827],
+  [151.222, -33.826],
+  [151.227, -33.825],
+  [151.232, -33.825],
+  [151.236, -33.824],
+  [151.240, -33.823],
+  [151.244, -33.822],
+  [151.247, -33.820],
+  [151.249, -33.816],
+]
+
+const BYPASS_START = BYPASS_ROUTE_COORDS[0]
+const BYPASS_END   = BYPASS_ROUTE_COORDS[BYPASS_ROUTE_COORDS.length - 1]
+
+const BASE_STYLE = {
+  version: 8,
+  glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+  sources: {
+    carto: {
+      type: 'raster',
+      tiles: [
+        'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+        'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+        'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+      ],
+      tileSize: 256,
+    },
+  },
+  layers: [
+    {
+      id: 'carto-base',
+      type: 'raster',
+      source: 'carto',
+      paint: {
+        'raster-saturation': -0.3,
+        'raster-brightness-min': 0.08,
+        'raster-brightness-max': 0.92,
+      },
+    },
+  ],
+}
+
+// Perpendicular buffer polygon around a polyline (for 3D deck extrusion)
+function corridorPolygon(coords, halfWidthM = 11) {
+  const LAT_M = 111000
+  const LNG_M = 92600
+  const left = []
+  const right = []
+
+  for (let i = 0; i < coords.length; i++) {
+    const prev = coords[i - 1] || coords[i]
+    const next = coords[i + 1] || coords[i]
+    const dx = (next[0] - prev[0]) * LNG_M
+    const dy = (next[1] - prev[1]) * LAT_M
+    const len = Math.sqrt(dx * dx + dy * dy) || 1
+    const px = (-dy / len) * halfWidthM / LNG_M
+    const py = (dx / len) * halfWidthM / LAT_M
+    left.push([coords[i][0] + px, coords[i][1] + py])
+    right.push([coords[i][0] - px, coords[i][1] - py])
+  }
+
+  return [...left, ...right.reverse(), left[0]]
+}
+
+function BypassMap3D() {
+  const containerRef = useRef(null)
+  const mapRef = useRef(null)
+
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return
+
+    const map = new maplibregl.Map({
+      container: containerRef.current,
+      style: BASE_STYLE,
+      center: [151.230, -33.824],
+      zoom: 13.8,
+      pitch: 52,
+      bearing: -18,
+      minZoom: 11,
+      antialias: true,
+    })
+
+    mapRef.current = map
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right')
+    map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left')
+
+    map.on('load', () => {
+      // --- Existing OSM buildings (hologram-coloured by height) ---
+      map.addSource('bypass-osm-buildings', { type: 'geojson', data: OSM_BUILDINGS })
+
+      map.addLayer({
+        id: 'bypass-buildings-fill',
+        type: 'fill',
+        source: 'bypass-osm-buildings',
+        paint: {
+          'fill-color': '#ffffff',
+          'fill-opacity': 0.12,
+        },
+      })
+
+      map.addLayer({
+        id: 'bypass-buildings-lines',
+        type: 'line',
+        source: 'bypass-osm-buildings',
+        paint: {
+          'line-color': '#475569',
+          'line-width': ['interpolate', ['linear'], ['zoom'], 13, 0.4, 16, 1.1],
+          'line-opacity': 0.45,
+        },
+      })
+
+      map.addLayer({
+        id: 'bypass-buildings-extrusion',
+        type: 'fill-extrusion',
+        source: 'bypass-osm-buildings',
+        minzoom: 13,
+        paint: {
+          'fill-extrusion-color': [
+            'interpolate', ['linear'], ['get', 'height'],
+            0,  '#334155',
+            8,  '#22d3ee',
+            18, '#818cf8',
+            32, '#a78bfa',
+            50, '#f472b6',
+          ],
+          'fill-extrusion-height': ['get', 'height'],
+          'fill-extrusion-base': 0,
+          'fill-extrusion-opacity': 0.72,
+          'fill-extrusion-vertical-gradient': true,
+        },
+      })
+
+      // --- Bypass corridor: ground shadow ---
+      const corridorGeo = {
+        type: 'Feature',
+        geometry: { type: 'Polygon', coordinates: [corridorPolygon(BYPASS_ROUTE_COORDS, 14)] },
+      }
+
+      map.addSource('bypass-corridor', { type: 'geojson', data: corridorGeo })
+
+      map.addLayer({
+        id: 'bypass-ground-shadow',
+        type: 'fill',
+        source: 'bypass-corridor',
+        paint: {
+          'fill-color': '#0f172a',
+          'fill-opacity': 0.35,
+        },
+      })
+
+      // --- Bypass deck: support columns area (base extrusion, dark) ---
+      map.addLayer({
+        id: 'bypass-columns',
+        type: 'fill-extrusion',
+        source: 'bypass-corridor',
+        paint: {
+          'fill-extrusion-color': '#64748b',
+          'fill-extrusion-height': 8.5,
+          'fill-extrusion-base': 0,
+          'fill-extrusion-opacity': 0.4,
+          'fill-extrusion-vertical-gradient': true,
+        },
+      })
+
+      // --- Bypass deck: elevated road surface ---
+      map.addLayer({
+        id: 'bypass-deck',
+        type: 'fill-extrusion',
+        source: 'bypass-corridor',
+        paint: {
+          'fill-extrusion-color': '#ef4444',
+          'fill-extrusion-height': 11,
+          'fill-extrusion-base': 8.5,
+          'fill-extrusion-opacity': 0.92,
+          'fill-extrusion-vertical-gradient': false,
+        },
+      })
+
+      // --- Bypass center line: glow layers ---
+      map.addSource('bypass-route', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: BYPASS_ROUTE_COORDS },
+        },
+      })
+
+      map.addLayer({
+        id: 'bypass-line-halo',
+        type: 'line',
+        source: 'bypass-route',
+        paint: {
+          'line-color': '#ff6666',
+          'line-width': 28,
+          'line-opacity': 0.18,
+          'line-blur': 10,
+        },
+      })
+
+      map.addLayer({
+        id: 'bypass-line-mid',
+        type: 'line',
+        source: 'bypass-route',
+        paint: {
+          'line-color': '#fca5a5',
+          'line-width': 6,
+          'line-opacity': 0.55,
+          'line-blur': 2,
+        },
+      })
+
+      map.addLayer({
+        id: 'bypass-line-centre',
+        type: 'line',
+        source: 'bypass-route',
+        paint: {
+          'line-color': '#ffffff',
+          'line-width': 2,
+          'line-opacity': 0.9,
+          'line-dasharray': [3, 2],
+        },
+      })
+
+      // --- Endpoint markers ---
+      const endpointLabels = [
+        { coord: BYPASS_START, label: 'Warringah Fwy' },
+        { coord: BYPASS_END,   label: 'Spit Rd' },
+      ]
+
+      endpointLabels.forEach(({ coord, label }) => {
+        const el = document.createElement('div')
+        el.style.cssText = [
+          'width:34px', 'height:34px',
+          'border:3px solid #ef4444',
+          'border-radius:50%',
+          'background:rgba(239,68,68,0.22)',
+          'box-shadow:0 0 16px rgba(239,68,68,0.6)',
+          'cursor:default',
+        ].join(';')
+
+        const popup = new maplibregl.Popup({ closeButton: false, offset: 20 })
+          .setHTML(`<div style="font-size:11px;font-weight:700;color:#0f172a">${label}</div>`)
+
+        new maplibregl.Marker({ element: el })
+          .setLngLat(coord)
+          .setPopup(popup)
+          .addTo(map)
+      })
+    })
+
+    return () => {
+      map.remove()
+      mapRef.current = null
+    }
+  }, [])
+
+  return (
+    <div className="holo-map-shell relative overflow-hidden rounded-xl">
+      <div ref={containerRef} className="w-full" style={{ height: '500px' }} />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-slate-950/50 to-transparent" />
+      <div className="pointer-events-none holo-scanlines absolute inset-0" />
+      <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-sm rounded-lg px-3 py-2 pointer-events-none">
+        <p className="text-xs font-bold text-red-400 uppercase tracking-widest">Overhead Bypass Route</p>
+        <p className="text-xs text-slate-300 mt-0.5">Military Rd corridor · Warringah Fwy → Spit Rd</p>
+      </div>
+      <div className="absolute bottom-10 left-3 flex flex-col gap-1.5 pointer-events-none">
+        <div className="flex items-center gap-2 bg-slate-900/70 rounded px-2 py-1">
+          <span className="w-4 h-2 rounded-sm" style={{ background: '#ef4444' }} />
+          <span className="text-[10px] text-slate-200 font-semibold">Elevated bypass deck (8.5–11m)</span>
+        </div>
+        <div className="flex items-center gap-2 bg-slate-900/70 rounded px-2 py-1">
+          <span className="w-4 h-2 rounded-sm" style={{ background: 'linear-gradient(90deg,#22d3ee,#a78bfa,#f472b6)' }} />
+          <span className="text-[10px] text-slate-200 font-semibold">Future buildings (Option 2 heights)</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Street-level canvas scene ───────────────────────────────────────────────
+
 const LEFT_BUILDINGS = [
   { label: 'Spit Junction Tower', floors: 28, widthM: 22, offsetM: 0 },
   { label: 'Mixed-Use Block', floors: 18, widthM: 18, offsetM: 26 },
@@ -31,7 +317,6 @@ const RIGHT_BUILDINGS = [
 function drawScene(ctx, W, H, showBypass, showOption2, animT) {
   ctx.clearRect(0, 0, W, H)
 
-  // Sky gradient
   const sky = ctx.createLinearGradient(0, 0, 0, H * 0.62)
   sky.addColorStop(0, '#e0f2fe')
   sky.addColorStop(0.6, '#bae6fd')
@@ -39,13 +324,11 @@ function drawScene(ctx, W, H, showBypass, showOption2, animT) {
   ctx.fillStyle = sky
   ctx.fillRect(0, 0, W, H)
 
-  // Perspective setup
-  const vp = { x: W / 2, y: H * 0.42 }   // vanishing point
+  const vp = { x: W / 2, y: H * 0.42 }
   const groundY = H * 0.82
   const nearRoadHalfW = W * 0.36
   const farRoadHalfW = 18
 
-  // Road surface
   ctx.beginPath()
   ctx.moveTo(vp.x - farRoadHalfW, vp.y)
   ctx.lineTo(vp.x + farRoadHalfW, vp.y)
@@ -58,27 +341,22 @@ function drawScene(ctx, W, H, showBypass, showOption2, animT) {
   ctx.fillStyle = roadGrad
   ctx.fill()
 
-  // Road lane markings
   ctx.save()
   ctx.strokeStyle = '#fff'
   ctx.setLineDash([18, 14])
   ctx.lineWidth = 2.5
-  ;[0].forEach(() => {
-    ctx.beginPath()
-    ctx.moveTo(vp.x, vp.y + 1)
-    ctx.lineTo(vp.x, groundY)
-    ctx.stroke()
-  })
+  ctx.beginPath()
+  ctx.moveTo(vp.x, vp.y + 1)
+  ctx.lineTo(vp.x, groundY)
+  ctx.stroke()
   ctx.restore()
 
-  // Footpaths
   const fpW = 0.08
   ;[-1, 1].forEach(side => {
     const nearEdge = side * nearRoadHalfW
     const farEdge = side * farRoadHalfW
     const nearPath = side * (nearRoadHalfW + W * fpW)
     const farPath = side * (farRoadHalfW + 8)
-
     ctx.beginPath()
     ctx.moveTo(vp.x + farEdge, vp.y)
     ctx.lineTo(vp.x + farPath, vp.y)
@@ -92,11 +370,9 @@ function drawScene(ctx, W, H, showBypass, showOption2, animT) {
     ctx.fill()
   })
 
-  // Helper: perspective project a world point
-  // worldX = lateral metres from road centre, worldY = height metres, worldZ = depth metres (0=near, 200=far)
   const totalDepth = 200
   function proj(worldX, worldY, worldZ) {
-    const t = worldZ / totalDepth   // 0 = near, 1 = far
+    const t = worldZ / totalDepth
     const screenX = vp.x + worldX * (nearRoadHalfW + W * fpW) / ROAD_WIDTH_M * 2 * (1 - t) +
       worldX * farRoadHalfW / ROAD_WIDTH_M * 2 * t
     const baseY = groundY + (vp.y - groundY) * t
@@ -105,7 +381,6 @@ function drawScene(ctx, W, H, showBypass, showOption2, animT) {
     return { x: screenX, y: screenY }
   }
 
-  // Draw buildings
   const buildingSets = [
     { buildings: LEFT_BUILDINGS, side: -1, setback: ROAD_WIDTH_M / 2 + 2 },
     { buildings: RIGHT_BUILDINGS, side: 1, setback: ROAD_WIDTH_M / 2 + 2 },
@@ -124,22 +399,17 @@ function drawScene(ctx, W, H, showBypass, showOption2, animT) {
       const br = proj(x1, 0, z0)
       const tr = proj(x1, heightM, z0)
       const tl = proj(x0, heightM, z0)
-      const blF = proj(x0, 0, z1)
       const brF = proj(x1, 0, z1)
       const trF = proj(x1, heightM, z1)
       const tlF = proj(x0, heightM, z1)
 
-      // Hue based on height
       const hue = 200 + floors * 3
       const sat = 30 + floors * 0.8
       const light = showOption2 ? 52 - floors * 0.4 : 72
 
-      // Front face
       ctx.beginPath()
-      ctx.moveTo(bl.x, bl.y)
-      ctx.lineTo(br.x, br.y)
-      ctx.lineTo(tr.x, tr.y)
-      ctx.lineTo(tl.x, tl.y)
+      ctx.moveTo(bl.x, bl.y); ctx.lineTo(br.x, br.y)
+      ctx.lineTo(tr.x, tr.y); ctx.lineTo(tl.x, tl.y)
       ctx.closePath()
       const faceGrad = ctx.createLinearGradient(0, tl.y, 0, bl.y)
       faceGrad.addColorStop(0, `hsl(${hue},${sat}%,${light - 6}%)`)
@@ -150,12 +420,9 @@ function drawScene(ctx, W, H, showBypass, showOption2, animT) {
       ctx.lineWidth = 0.8
       ctx.stroke()
 
-      // Side face (far)
       ctx.beginPath()
-      ctx.moveTo(br.x, br.y)
-      ctx.lineTo(brF.x, brF.y)
-      ctx.lineTo(trF.x, trF.y)
-      ctx.lineTo(tr.x, tr.y)
+      ctx.moveTo(br.x, br.y); ctx.lineTo(brF.x, brF.y)
+      ctx.lineTo(trF.x, trF.y); ctx.lineTo(tr.x, tr.y)
       ctx.closePath()
       ctx.fillStyle = `hsl(${hue},${sat - 8}%,${light - 12}%)`
       ctx.fill()
@@ -163,27 +430,24 @@ function drawScene(ctx, W, H, showBypass, showOption2, animT) {
       ctx.lineWidth = 0.6
       ctx.stroke()
 
-      // Roof
       ctx.beginPath()
-      ctx.moveTo(tl.x, tl.y)
-      ctx.lineTo(tr.x, tr.y)
-      ctx.lineTo(trF.x, trF.y)
-      ctx.lineTo(tlF.x, tlF.y)
+      ctx.moveTo(tl.x, tl.y); ctx.lineTo(tr.x, tr.y)
+      ctx.lineTo(trF.x, trF.y); ctx.lineTo(tlF.x, tlF.y)
       ctx.closePath()
       ctx.fillStyle = `hsl(${hue},${sat - 5}%,${light + 2}%)`
       ctx.fill()
 
-      // Windows (front face only, >2 floors)
       if (floors > 3) {
         const winCols = Math.max(1, Math.floor(12 / 3.5))
         const winRows = Math.min(floors - 1, 8)
         for (let r = 0; r < winRows; r++) {
           for (let c = 0; c < winCols; c++) {
-            const wx = side > 0 ? br.x + (tl.x - bl.x) * ((c + 0.5) / winCols) * 0.6 :
-              bl.x + (tr.x - br.x) * ((c + 0.5) / winCols) * 0.6
+            const wx = side > 0
+              ? br.x + (tl.x - bl.x) * ((c + 0.5) / winCols) * 0.6
+              : bl.x + (tr.x - br.x) * ((c + 0.5) / winCols) * 0.6
             const wy = bl.y - (bl.y - tl.y) * ((r + 0.8) / (winRows + 1))
             const ws = Math.max(2, (br.y - tr.y) / winRows * 0.38)
-            const isLit = (Math.sin(c * 7 + r * 13 + floors) > 0.2)
+            const isLit = Math.sin(c * 7 + r * 13 + floors) > 0.2
             ctx.fillStyle = isLit
               ? `rgba(255,245,200,${0.55 + 0.3 * Math.sin(animT * 0.9 + c + r)})`
               : 'rgba(100,130,160,0.55)'
@@ -192,7 +456,6 @@ function drawScene(ctx, W, H, showBypass, showOption2, animT) {
         }
       }
 
-      // Floor label on tallest buildings
       if (floors >= 12 && showOption2) {
         const labelP = proj(side * (setback + 6), heightM + 4, b.offsetM + b.widthM / 2)
         ctx.font = `bold ${Math.max(9, 11 - b.offsetM / 25)}px sans-serif`
@@ -203,7 +466,6 @@ function drawScene(ctx, W, H, showBypass, showOption2, animT) {
     })
   })
 
-  // Street trees
   ;[-1, 1].forEach(side => {
     for (let z = 10; z < 180; z += 22) {
       const x = side * (ROAD_WIDTH_M / 2 + 5)
@@ -211,14 +473,12 @@ function drawScene(ctx, W, H, showBypass, showOption2, animT) {
       const trunkTop = proj(x, 5, z)
       const canopy = proj(x, 9, z)
       const scale = 1 - z / 280
-
       ctx.strokeStyle = '#6b4c26'
       ctx.lineWidth = Math.max(1, 3 * scale)
       ctx.beginPath()
       ctx.moveTo(trunkBase.x, trunkBase.y)
       ctx.lineTo(trunkTop.x, trunkTop.y)
       ctx.stroke()
-
       ctx.beginPath()
       ctx.arc(canopy.x, canopy.y, Math.max(4, 22 * scale), 0, Math.PI * 2)
       ctx.fillStyle = `rgba(34,197,94,${0.55 + scale * 0.3})`
@@ -226,12 +486,9 @@ function drawScene(ctx, W, H, showBypass, showOption2, animT) {
     }
   })
 
-  // Overhead bypass structure
   if (showBypass) {
-    const bypassLanes = 2
     const deckW = ROAD_WIDTH_M * 0.72
 
-    // Piers
     for (let z = 25; z < 180; z += 35) {
       ;[-1, 1].forEach(side => {
         const pierX = side * deckW * 0.44
@@ -244,8 +501,6 @@ function drawScene(ctx, W, H, showBypass, showOption2, animT) {
         ctx.lineTo(cap.x, cap.y)
         ctx.stroke()
       })
-
-      // Cross beam
       const leftCap = proj(-deckW * 0.44, BYPASS_HEIGHT_M, z)
       const rightCap = proj(deckW * 0.44, BYPASS_HEIGHT_M, z)
       ctx.strokeStyle = '#64748b'
@@ -256,45 +511,35 @@ function drawScene(ctx, W, H, showBypass, showOption2, animT) {
       ctx.stroke()
     }
 
-    // Deck surface (bottom of slab)
     const zSteps = 60
     for (let i = 0; i < zSteps; i++) {
       const z0 = (i / zSteps) * 190
       const z1 = ((i + 1) / zSteps) * 190
       const deckH = BYPASS_HEIGHT_M
       const deckBot = deckH - BYPASS_DECK_THICKNESS
-
       const ll = proj(-deckW / 2, deckH, z0)
       const lr = proj(deckW / 2, deckH, z0)
       const rl = proj(-deckW / 2, deckH, z1)
       const rr = proj(deckW / 2, deckH, z1)
-
       const t = i / zSteps
       ctx.beginPath()
-      ctx.moveTo(ll.x, ll.y)
-      ctx.lineTo(lr.x, lr.y)
-      ctx.lineTo(rr.x, rr.y)
-      ctx.lineTo(rl.x, rl.y)
+      ctx.moveTo(ll.x, ll.y); ctx.lineTo(lr.x, lr.y)
+      ctx.lineTo(rr.x, rr.y); ctx.lineTo(rl.x, rl.y)
       ctx.closePath()
       ctx.fillStyle = `rgba(148,163,184,${0.82 - t * 0.25})`
       ctx.fill()
-
-      // Bottom of deck (underside shadow)
       const llb = proj(-deckW / 2, deckBot, z0)
       const lrb = proj(deckW / 2, deckBot, z0)
       const rlb = proj(-deckW / 2, deckBot, z1)
       const rrb = proj(deckW / 2, deckBot, z1)
       ctx.beginPath()
-      ctx.moveTo(llb.x, llb.y)
-      ctx.lineTo(lrb.x, lrb.y)
-      ctx.lineTo(rrb.x, rrb.y)
-      ctx.lineTo(rlb.x, rlb.y)
+      ctx.moveTo(llb.x, llb.y); ctx.lineTo(lrb.x, lrb.y)
+      ctx.lineTo(rrb.x, rrb.y); ctx.lineTo(rlb.x, rlb.y)
       ctx.closePath()
       ctx.fillStyle = `rgba(51,65,85,${0.6 - t * 0.2})`
       ctx.fill()
     }
 
-    // Bypass deck lane markings
     for (let z = 8; z < 185; z += 20) {
       const near = proj(0, BYPASS_HEIGHT_M + 0.05, z)
       const far = proj(0, BYPASS_HEIGHT_M + 0.05, z + 10)
@@ -307,7 +552,6 @@ function drawScene(ctx, W, H, showBypass, showOption2, animT) {
       ctx.stroke()
     }
 
-    // Bypass guardrail
     ;[-1, 1].forEach(side => {
       ctx.beginPath()
       const railH = BYPASS_HEIGHT_M + 1.1
@@ -322,16 +566,12 @@ function drawScene(ctx, W, H, showBypass, showOption2, animT) {
       ctx.stroke()
     })
 
-    // Label
     const labelPos = proj(0, BYPASS_HEIGHT_M + 3.5, 40)
     ctx.font = 'bold 13px sans-serif'
     ctx.fillStyle = '#1e40af'
     ctx.textAlign = 'center'
     ctx.fillText('Military Rd Overhead Bypass', labelPos.x, labelPos.y)
-  }
 
-  // Ground-level bypass shadow cast under deck
-  if (showBypass) {
     ctx.save()
     ctx.globalAlpha = 0.22
     ctx.beginPath()
@@ -339,24 +579,20 @@ function drawScene(ctx, W, H, showBypass, showOption2, animT) {
     const sr = proj(deckW * 0.5, 0, 0)
     const slF = proj(-deckW * 0.5, 0, 190)
     const srF = proj(deckW * 0.5, 0, 190)
-    ctx.moveTo(sl.x, sl.y)
-    ctx.lineTo(sr.x, sr.y)
-    ctx.lineTo(srF.x, srF.y)
-    ctx.lineTo(slF.x, slF.y)
+    ctx.moveTo(sl.x, sl.y); ctx.lineTo(sr.x, sr.y)
+    ctx.lineTo(srF.x, srF.y); ctx.lineTo(slF.x, slF.y)
     ctx.closePath()
     ctx.fillStyle = '#334155'
     ctx.fill()
     ctx.restore()
   }
 
-  // Foreground road markings & curbs
   ctx.fillStyle = '#e2e8f0'
   ctx.fillRect(vp.x - nearRoadHalfW - 4, groundY - 4, 8, H - groundY + 8)
   ctx.fillRect(vp.x + nearRoadHalfW - 4, groundY - 4, 8, H - groundY + 8)
 }
 
-// Store a reference to deckW for shadow — hoist it
-let deckW = ROAD_WIDTH_M * 0.72
+// ─── Main export ─────────────────────────────────────────────────────────────
 
 export default function BypassVisualization() {
   const canvasRef = useRef(null)
@@ -397,41 +633,48 @@ export default function BypassVisualization() {
   }, [showBypass, showOption2])
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold text-slate-900">Military Road Overhead Bypass</h2>
         <p className="text-sm text-slate-500 mt-1">
-          Street-level perspective — Option 2 (High &amp; Narrow, up to 28 storeys) with elevated bypass structure
+          Aerial 3D route map + street-level perspective — Option 2 (High &amp; Narrow, up to 28 storeys)
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={() => setShowBypass(v => !v)}
-          className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-            showBypass ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-          }`}
-        >
-          {showBypass ? 'Bypass ON' : 'Bypass OFF'}
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowOption2(v => !v)}
-          className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-            showOption2 ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-          }`}
-        >
-          {showOption2 ? 'Option 2 Heights' : 'Current Heights'}
-        </button>
-      </div>
+      {/* 3D aerial map */}
+      <BypassMap3D />
 
-      <div className="rounded-xl overflow-hidden border border-slate-200 shadow-lg bg-sky-100">
-        <canvas
-          ref={canvasRef}
-          className="w-full"
-          style={{ height: '520px', display: 'block' }}
-        />
+      {/* Street-level controls */}
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">Street-level view</p>
+        <div className="flex flex-wrap gap-3 mb-4">
+          <button
+            type="button"
+            onClick={() => setShowBypass(v => !v)}
+            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+              showBypass ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+            }`}
+          >
+            {showBypass ? 'Bypass ON' : 'Bypass OFF'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowOption2(v => !v)}
+            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+              showOption2 ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+            }`}
+          >
+            {showOption2 ? 'Option 2 Heights' : 'Current Heights'}
+          </button>
+        </div>
+
+        <div className="rounded-xl overflow-hidden border border-slate-200 shadow-lg bg-sky-100">
+          <canvas
+            ref={canvasRef}
+            className="w-full"
+            style={{ height: '520px', display: 'block' }}
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
