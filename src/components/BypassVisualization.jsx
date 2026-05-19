@@ -211,7 +211,6 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
         id: 'bypass-buildings-fill',
         type: 'fill',
         source: 'bypass-osm-buildings',
-        filter: initFilter || undefined,
         paint: { 'fill-color': '#ffffff', 'fill-opacity': 0.12 },
       })
 
@@ -219,7 +218,6 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
         id: 'bypass-buildings-lines',
         type: 'line',
         source: 'bypass-osm-buildings',
-        filter: initFilter || undefined,
         paint: {
           'line-color': '#475569',
           'line-width': ['interpolate', ['linear'], ['zoom'], 13, 0.4, 16, 1.1],
@@ -227,14 +225,11 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
         },
       })
 
-      const initFilter = optionBuildingFilter(showOption2, routeCoords || BYPASS_ROUTE_COORDS)
-
       map.addLayer({
         id: 'bypass-buildings-extrusion',
         type: 'fill-extrusion',
         source: 'bypass-osm-buildings',
         minzoom: 13,
-        filter: initFilter || undefined,
         paint: {
           'fill-extrusion-color': buildingColorExpr(showOption1, showOption2),
           'fill-extrusion-height': buildingHeightExpr(showOption1, showOption2),
@@ -331,6 +326,10 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
             .setHTML(`<div style="font-size:11px;font-weight:700;color:#0f172a">${label}</div>`))
           .addTo(map)
       })
+
+      // Apply initial building filter now that all layers exist
+      const initFilter = optionBuildingFilter(showOption2, routeCoords || BYPASS_ROUTE_COORDS)
+      BUILDING_LAYER_IDS.forEach(id => map.setFilter(id, initFilter))
     })
 
     return () => {
