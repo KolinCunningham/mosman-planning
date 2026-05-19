@@ -133,22 +133,20 @@ function buildingColorExpr(showOption1, showOption2) {
   return '#64748b'
 }
 
-function routeBbox(routeCoords, padDeg = 0.004) {
-  const lngs = routeCoords.map(c => c[0])
-  const lats = routeCoords.map(c => c[1])
-  const w = Math.min(...lngs) - padDeg
-  const e = Math.max(...lngs) + padDeg
-  const s = Math.min(...lats) - padDeg
-  const n = Math.max(...lats) + padDeg
-  // Simple rectangle — always valid, never self-intersects
-  return [[w, s], [e, s], [e, n], [w, n], [w, s]]
-}
-
 function optionBuildingFilter(showOption2, routeCoords) {
   if (showOption2) {
-    // Option 2 = High & Narrow: tight corridor, ~300m each side of Military/Spit Rd
-    const ring = routeBbox(routeCoords, 0.003)
-    return ['within', { type: 'Polygon', coordinates: [ring] }]
+    // Option 2 = High & Narrow: tight corridor (~300m each side of Military/Spit Rd)
+    // Use centroid_lng/lat property comparisons — ['within'] is unreliable for
+    // GeoJSON polygon features in MapLibre and returns nothing.
+    const lngs = routeCoords.map(c => c[0])
+    const lats = routeCoords.map(c => c[1])
+    const pad = 0.003
+    return ['all',
+      ['>=', ['get', 'centroid_lng'], Math.min(...lngs) - pad],
+      ['<=', ['get', 'centroid_lng'], Math.max(...lngs) + pad],
+      ['>=', ['get', 'centroid_lat'], Math.min(...lats) - pad],
+      ['<=', ['get', 'centroid_lat'], Math.max(...lats) + pad],
+    ]
   }
   // Option 1 = Low & Wide: all ~900 Mosman buildings (13% LGA, broader spread)
   return null
