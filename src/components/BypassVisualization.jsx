@@ -185,11 +185,25 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
     })
 
     mapRef.current = map
+
+    // Fix grey tiles when container renders before map initialises
+    const ro = new ResizeObserver(() => map.resize())
+    ro.observe(containerRef.current)
+
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right')
     map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left')
 
     map.on('load', () => {
       loadedRef.current = true
+
+      // Fit to route bounds so Military Rd is always in view
+      const lngs = BYPASS_ROUTE_COORDS.map(c => c[0])
+      const lats = BYPASS_ROUTE_COORDS.map(c => c[1])
+      map.fitBounds(
+        [[Math.min(...lngs) - 0.004, Math.min(...lats) - 0.004],
+         [Math.max(...lngs) + 0.004, Math.max(...lats) + 0.004]],
+        { padding: 60, pitch: 52, bearing: -18, duration: 800 }
+      )
 
       map.addSource('bypass-osm-buildings', { type: 'geojson', data: OSM_BUILDINGS })
 
@@ -320,6 +334,7 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
     })
 
     return () => {
+      ro.disconnect()
       map.remove()
       mapRef.current = null
       loadedRef.current = false
