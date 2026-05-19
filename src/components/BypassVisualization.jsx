@@ -97,8 +97,9 @@ function buildingColorExpr(showOption1, showOption2) {
 
 function optionBuildingFilter(showOption2, routeCoords) {
   if (showOption2) {
-    // Option 2 = High & Narrow: only buildings within ~280m of the corridor
-    const ring = corridorPolygon(routeCoords, 280)
+    // Option 2 = High & Narrow: buildings within ~500m corridor (wider buffer so
+    // edge buildings with vertices outside aren't excluded by ['within'])
+    const ring = corridorPolygon(routeCoords, 500)
     return ['within', { type: 'Polygon', coordinates: [ring] }]
   }
   return null
@@ -200,9 +201,9 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
       const lngs = BYPASS_ROUTE_COORDS.map(c => c[0])
       const lats = BYPASS_ROUTE_COORDS.map(c => c[1])
       map.fitBounds(
-        [[Math.min(...lngs) - 0.004, Math.min(...lats) - 0.004],
-         [Math.max(...lngs) + 0.004, Math.max(...lats) + 0.004]],
-        { padding: 60, pitch: 52, bearing: -18, duration: 800 }
+        [[Math.min(...lngs) - 0.001, Math.min(...lats) - 0.001],
+         [Math.max(...lngs) + 0.001, Math.max(...lats) + 0.001]],
+        { padding: 80, pitch: 52, bearing: -18, duration: 800 }
       )
 
       map.addSource('bypass-osm-buildings', { type: 'geojson', data: OSM_BUILDINGS })
@@ -229,7 +230,6 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
         id: 'bypass-buildings-extrusion',
         type: 'fill-extrusion',
         source: 'bypass-osm-buildings',
-        minzoom: 13,
         paint: {
           'fill-extrusion-color': buildingColorExpr(showOption1, showOption2),
           'fill-extrusion-height': buildingHeightExpr(showOption1, showOption2),
