@@ -95,12 +95,23 @@ function buildingColorExpr(showOption1, showOption2) {
   return '#64748b'
 }
 
+function optionBuildingFilter(showOption2, routeCoords) {
+  if (showOption2) {
+    // Option 2 = High & Narrow: only buildings within ~280m of the corridor
+    const ring = corridorPolygon(routeCoords, 280)
+    return ['within', { type: 'Polygon', coordinates: [ring] }]
+  }
+  return null
+}
+
 function updateRouteSources(map, coords) {
   const routeSrc = map.getSource('bypass-route')
   if (routeSrc) routeSrc.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: coords } })
   const corridorSrc = map.getSource('bypass-corridor')
   if (corridorSrc) corridorSrc.setData({ type: 'Feature', geometry: { type: 'Polygon', coordinates: [corridorPolygon(coords, 14)] } })
 }
+
+const BUILDING_LAYER_IDS = ['bypass-buildings-extrusion', 'bypass-buildings-fill', 'bypass-buildings-lines']
 
 function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, onRouteChange }) {
   const containerRef = useRef(null)
@@ -115,7 +126,9 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
     map.setPaintProperty('bypass-buildings-extrusion', 'fill-extrusion-height', buildingHeightExpr(showOption1, showOption2))
     map.setPaintProperty('bypass-buildings-extrusion', 'fill-extrusion-color', buildingColorExpr(showOption1, showOption2))
     map.setPaintProperty('bypass-buildings-extrusion', 'fill-extrusion-opacity', showOption1 || showOption2 ? 0.72 : 0.3)
-  }, [showOption1, showOption2])
+    const filter = optionBuildingFilter(showOption2, routeCoords || BYPASS_ROUTE_COORDS)
+    BUILDING_LAYER_IDS.forEach(id => map.setFilter(id, filter))
+  }, [showOption1, showOption2, routeCoords])
 
   useEffect(() => {
     const map = mapRef.current
@@ -184,6 +197,7 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
         id: 'bypass-buildings-fill',
         type: 'fill',
         source: 'bypass-osm-buildings',
+        filter: initFilter || undefined,
         paint: { 'fill-color': '#ffffff', 'fill-opacity': 0.12 },
       })
 
@@ -191,6 +205,7 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
         id: 'bypass-buildings-lines',
         type: 'line',
         source: 'bypass-osm-buildings',
+        filter: initFilter || undefined,
         paint: {
           'line-color': '#475569',
           'line-width': ['interpolate', ['linear'], ['zoom'], 13, 0.4, 16, 1.1],
@@ -198,11 +213,14 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
         },
       })
 
+      const initFilter = optionBuildingFilter(showOption2, routeCoords || BYPASS_ROUTE_COORDS)
+
       map.addLayer({
         id: 'bypass-buildings-extrusion',
         type: 'fill-extrusion',
         source: 'bypass-osm-buildings',
         minzoom: 13,
+        filter: initFilter || undefined,
         paint: {
           'fill-extrusion-color': buildingColorExpr(showOption1, showOption2),
           'fill-extrusion-height': buildingHeightExpr(showOption1, showOption2),
@@ -323,7 +341,7 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
         <LegendPill color="#ef4444" label="Elevated bypass deck (8.5–11m)" />
         {(showOption2 || showOption1) && (
           <LegendPill gradient="linear-gradient(90deg,#22d3ee,#a78bfa,#f472b6)"
-            label={showOption2 ? 'Option 2 — High & Narrow (×5 height)' : 'Option 1 — Low & Wide (×2.8 height)'} />
+            label={showOption2 ? 'Option 2 — High & Narrow (corridor only, ×5 height)' : 'Option 1 — Low & Wide (all Mosman, ×2.8 height)'} />
         )}
       </div>
     </div>
