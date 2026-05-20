@@ -810,6 +810,55 @@ const RIGHT_BUILDINGS = [
   { label: 'Townhouse',       floors: 3,  widthM: 20, offsetM: 154 },
 ]
 
+const GOOGLE_STREET_VIEW_POINTS = [
+  {
+    id: 'military-west',
+    label: 'Military Road west',
+    position: { lat: -33.82765, lng: 151.23125 },
+    pov: { heading: 71, pitch: 2 },
+  },
+  {
+    id: 'mosman-centre',
+    label: 'Mosman centre',
+    position: { lat: -33.82455, lng: 151.24062 },
+    pov: { heading: 83, pitch: 3 },
+  },
+  {
+    id: 'spit-junction',
+    label: 'Spit Junction',
+    position: { lat: -33.81995, lng: 151.24398 },
+    pov: { heading: 14, pitch: 4 },
+  },
+]
+
+let googleMapsLoaderPromise
+
+function loadGoogleMaps(apiKey) {
+  if (typeof window === 'undefined') return Promise.reject(new Error('Browser runtime required'))
+  if (window.google?.maps?.StreetViewPanorama) return Promise.resolve(window.google.maps)
+  if (googleMapsLoaderPromise) return googleMapsLoaderPromise
+
+  googleMapsLoaderPromise = new Promise((resolve, reject) => {
+    const existingScript = document.querySelector('script[data-google-maps-loader="mosman-bypass"]')
+    if (existingScript) {
+      existingScript.addEventListener('load', () => resolve(window.google.maps), { once: true })
+      existingScript.addEventListener('error', () => reject(new Error('Google Maps script failed to load')), { once: true })
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly&auth_referrer_policy=origin`
+    script.async = true
+    script.defer = true
+    script.dataset.googleMapsLoader = 'mosman-bypass'
+    script.onload = () => resolve(window.google.maps)
+    script.onerror = () => reject(new Error('Google Maps script failed to load'))
+    document.head.appendChild(script)
+  })
+
+  return googleMapsLoaderPromise
+}
+
 function drawScene(ctx, W, H, showBypass, showOption1, showOption2, animT) {
   ctx.clearRect(0, 0, W, H)
 
@@ -1029,6 +1078,233 @@ function drawScene(ctx, W, H, showBypass, showOption1, showOption2, animT) {
   ctx.fillRect(vp.x + nearRoadHalfW - 4, groundY - 4, 8, H - groundY + 8)
 }
 
+function GooglePhotoRealBypassView({ showBypass, showOption1, showOption2 }) {
+  const panoContainerRef = useRef(null)
+  const panoRef = useRef(null)
+  const [viewId, setViewId] = useState(GOOGLE_STREET_VIEW_POINTS[1].id)
+  const [status, setStatus] = useState('idle')
+  const [message, setMessage] = useState('')
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
+  const selectedView = GOOGLE_STREET_VIEW_POINTS.find(point => point.id === viewId) || GOOGLE_STREET_VIEW_POINTS[1]
+
+  useEffect(() => {
+    if (!apiKey) {
+      setStatus('missing-key')
+      setMessage('Add VITE_GOOGLE_MAPS_API_KEY to enable live Google Street View imagery.')
+      return
+    }
+    if (!panoContainerRef.current) return
+
+    let cancelled = false
+    setStatus('loading')
+    setMessage('Loading Google Street View...')
+
+    loadGoogleMaps(apiKey)
+      .then(maps => {
+        if (cancelled) return
+
+        const service = new maps.StreetViewService()
+        const applyPanorama = (data, streetViewStatus) => {
+          if (cancelled) return
+          if (streetViewStatus !== maps.StreetViewStatus.OK || !data?.location?.pano) {
+            setStatus('no-panorama')
+            setMessage('Google Street View did not return imagery for this Military Road point.')
+            return
+          }
+
+          if (!panoRef.current) {
+            panoRef.current = new maps.StreetViewPanorama(panoContainerRef.current, {
+              addressControl: false,
+              clickToGo: true,
+              disableDefaultUI: false,
+              fullscreenControl: true,
+              linksControl: true,
+              motionTracking: false,
+              motionTrackingControl: false,
+              panControl: true,
+              pov: selectedView.pov,
+              showRoadLabels: true,
+              visible: true,
+              zoom: 0,
+            })
+          }
+
+          panoRef.current.setPano(data.location.pano)
+          panoRef.current.setPov(selectedView.pov)
+          panoRef.current.setZoom(0)
+          setStatus('ready')
+          setMessage('')
+        }
+
+        service.getPanorama(
+          {
+            location: selectedView.position,
+            radius: 95,
+            source: maps.StreetViewSource.OUTDOOR,
+          },
+          applyPanorama
+        )
+      })
+      .catch(error => {
+        if (cancelled) return
+        setStatus('error')
+        setMessage(error.message || 'Google Maps could not be loaded.')
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [apiKey, selectedView])
+
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Photoreal Military Road view</p>
+          <p className="mt-1 text-xs text-slate-500">
+            Google Street View base with the same bypass and future-building scenario overlays.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {GOOGLE_STREET_VIEW_POINTS.map(point => (
+            <button
+              key={point.id}
+              type="button"
+              onClick={() => setViewId(point.id)}
+              className={`rounded px-2.5 py-1 text-xs font-semibold transition-colors ${
+                point.id === selectedView.id
+                  ? 'bg-slate-800 text-white'
+                  : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {point.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-950 shadow-lg">
+        {apiKey ? (
+          <div ref={panoContainerRef} className="h-[460px] w-full" />
+        ) : (
+          <PhotoRealFallback showBypass={showBypass} showOption1={showOption1} showOption2={showOption2} />
+        )}
+
+        {apiKey && status !== 'ready' && (
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-950/70 px-6 text-center backdrop-blur-sm">
+            <p className="max-w-md text-sm font-semibold text-white">{message}</p>
+          </div>
+        )}
+
+        <BypassPhotoOverlay
+          showBypass={showBypass}
+          showOption1={showOption1}
+          showOption2={showOption2}
+          muted={status !== 'ready' && !!apiKey}
+        />
+
+        <div className="pointer-events-none absolute left-3 top-3 rounded-lg bg-slate-950/70 px-3 py-2 text-white backdrop-blur-sm">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-sky-200">
+            {apiKey && status === 'ready' ? 'Google Street View' : 'Concept fallback'}
+          </p>
+          <p className="mt-0.5 text-xs font-semibold">{selectedView.label}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function PhotoRealFallback({ showBypass, showOption1, showOption2 }) {
+  const active = showOption1 || showOption2
+  return (
+    <div className="relative h-[460px] overflow-hidden bg-slate-900">
+      <div className="absolute inset-0 bg-gradient-to-b from-sky-200 via-slate-300 to-slate-700" />
+      <div className="absolute inset-x-0 top-[36%] h-[26%] bg-gradient-to-b from-slate-500/30 to-transparent blur-xl" />
+      <div className="absolute bottom-0 left-1/2 h-[62%] w-[74%] -translate-x-1/2 bg-gradient-to-t from-slate-700 via-slate-500 to-slate-400"
+        style={{ clipPath: 'polygon(35% 0, 65% 0, 100% 100%, 0 100%)' }} />
+      <div className="absolute bottom-0 left-1/2 h-[62%] w-[2px] -translate-x-1/2 bg-white/70" />
+      <div className="absolute bottom-[9%] left-[8%] right-[8%] h-[7%] bg-slate-300/55 blur-sm" />
+      {active && (
+        <>
+          <div className="absolute bottom-[23%] left-[6%] h-[40%] w-[12%] bg-slate-700/75 shadow-2xl" />
+          <div className="absolute bottom-[21%] left-[20%] h-[52%] w-[10%] bg-slate-800/75 shadow-2xl" />
+          <div className="absolute bottom-[24%] right-[8%] h-[58%] w-[12%] bg-slate-800/75 shadow-2xl" />
+          <div className="absolute bottom-[22%] right-[24%] h-[38%] w-[11%] bg-slate-700/75 shadow-2xl" />
+        </>
+      )}
+      {showBypass && (
+        <div className="absolute left-[4%] right-[4%] top-[33%] h-[18%] rounded-full bg-red-400/25 blur-md" />
+      )}
+    </div>
+  )
+}
+
+function BypassPhotoOverlay({ showBypass, showOption1, showOption2, muted }) {
+  const active = showOption1 || showOption2
+  const towerScale = showOption2 ? 1 : showOption1 ? 0.72 : 0.28
+  const buildingOpacity = muted ? 0.32 : 0.62
+
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-slate-950/20" />
+
+      {active && (
+        <>
+          <FutureBuildingSilhouette side="left" x={5} width={8} height={42 * towerScale} tone="from-sky-300/70 to-cyan-700/60" opacity={buildingOpacity} label={showOption2 ? '18F' : '12F'} />
+          <FutureBuildingSilhouette side="left" x={16} width={10} height={64 * towerScale} tone="from-indigo-300/70 to-blue-900/65" opacity={buildingOpacity} label={showOption2 ? '24F' : '16F'} />
+          <FutureBuildingSilhouette side="left" x={29} width={8} height={50 * towerScale} tone="from-teal-200/70 to-teal-800/65" opacity={buildingOpacity} label={showOption2 ? '20F' : '14F'} />
+          <FutureBuildingSilhouette side="right" x={6} width={10} height={76 * towerScale} tone="from-rose-300/75 to-red-900/70" opacity={buildingOpacity} label={showOption2 ? '28F' : '20F'} />
+          <FutureBuildingSilhouette side="right" x={20} width={9} height={58 * towerScale} tone="from-amber-200/75 to-orange-800/70" opacity={buildingOpacity} label={showOption2 ? '22F' : '16F'} />
+          <FutureBuildingSilhouette side="right" x={33} width={8} height={44 * towerScale} tone="from-cyan-200/70 to-slate-800/65" opacity={buildingOpacity} label={showOption2 ? '15F' : '10F'} />
+        </>
+      )}
+
+      {showBypass && (
+        <>
+          <div className="absolute left-[3%] right-[3%] top-[31%] h-[18%] rounded-[45%] bg-red-500/25 blur-xl" />
+          <div
+            className="absolute left-[2%] right-[2%] top-[35%] h-[15%] border-y border-red-200/70 bg-gradient-to-r from-red-600/75 via-red-300/82 to-red-600/75 shadow-[0_0_28px_rgba(239,68,68,0.65)]"
+            style={{ clipPath: 'polygon(0 34%, 14% 21%, 30% 28%, 47% 46%, 63% 42%, 81% 27%, 100% 36%, 100% 66%, 81% 56%, 63% 72%, 47% 76%, 30% 55%, 14% 52%, 0 66%)' }}
+          />
+          <div
+            className="absolute left-[4%] right-[4%] top-[45%] h-[9%] bg-slate-900/70"
+            style={{ clipPath: 'polygon(0 20%, 14% 0, 30% 13%, 47% 45%, 63% 38%, 81% 5%, 100% 20%, 100% 72%, 81% 58%, 63% 90%, 47% 95%, 30% 58%, 14% 55%, 0 78%)' }}
+          />
+          <div className="absolute left-[16%] top-[49%] h-[28%] w-[1.1%] rounded bg-slate-300/70 shadow-lg" />
+          <div className="absolute left-[47%] top-[51%] h-[23%] w-[1.1%] rounded bg-slate-300/70 shadow-lg" />
+          <div className="absolute right-[17%] top-[48%] h-[29%] w-[1.1%] rounded bg-slate-300/70 shadow-lg" />
+        </>
+      )}
+    </div>
+  )
+}
+
+function FutureBuildingSilhouette({ side, x, width, height, tone, opacity, label }) {
+  const style = {
+    bottom: '20%',
+    height: `${height}%`,
+    opacity,
+    width: `${width}%`,
+    [side]: `${x}%`,
+  }
+
+  return (
+    <div
+      className={`absolute rounded-t-sm bg-gradient-to-b ${tone} shadow-[0_0_24px_rgba(14,165,233,0.35)] ring-1 ring-white/20`}
+      style={style}
+    >
+      <div className="absolute inset-x-[18%] top-[12%] grid grid-cols-2 gap-1">
+        {Array.from({ length: 10 }).map((_, index) => (
+          <span key={index} className="h-1 rounded-sm bg-white/45" />
+        ))}
+      </div>
+      <span className="absolute left-1/2 top-1 -translate-x-1/2 rounded bg-slate-950/70 px-1.5 py-0.5 text-[10px] font-bold text-white">
+        {label}
+      </span>
+    </div>
+  )
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export default function BypassVisualization() {
@@ -1147,6 +1423,12 @@ export default function BypassVisualization() {
           <canvas ref={canvasRef} className="w-full" style={{ height: '520px', display: 'block' }} />
         </div>
       </div>
+
+      <GooglePhotoRealBypassView
+        showBypass={showBypass}
+        showOption1={showOption1}
+        showOption2={showOption2}
+      />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
         {[
