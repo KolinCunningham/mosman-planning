@@ -28,6 +28,66 @@ const BYPASS_ROUTE_COORDS = [
 const BYPASS_START = BYPASS_ROUTE_COORDS[0]
 const BYPASS_END   = BYPASS_ROUTE_COORDS[BYPASS_ROUTE_COORDS.length - 1]
 
+// Existing parallel street network proposed for a reversible tidal flow trial.
+// AM inbound runs east-to-west; PM outbound would reverse the same corridor.
+const TIDAL_ROUTE_COORDS = [
+  [151.242754, -33.823346],
+  [151.242302, -33.822963],
+  [151.241884, -33.822625],
+  [151.240452, -33.822399],
+  [151.239541, -33.822265],
+  [151.238738, -33.822128],
+  [151.237880, -33.821989],
+  [151.236771, -33.821826],
+  [151.235763, -33.821681],
+  [151.233415, -33.821337],
+  [151.232216, -33.821161],
+  [151.232028, -33.822079],
+  [151.231837, -33.823035],
+  [151.231613, -33.824157],
+  [151.231457, -33.824945],
+  [151.231339, -33.825533],
+  [151.231203, -33.826201],
+  [151.230789, -33.826314],
+  [151.230205, -33.826570],
+  [151.229659, -33.826836],
+  [151.228277, -33.827485],
+  [151.227526, -33.827845],
+  [151.225541, -33.828791],
+  [151.224243, -33.829375],
+  [151.223994, -33.829370],
+  [151.222594, -33.829039],
+  [151.221983, -33.828890],
+  [151.220680, -33.828570],
+  [151.220069, -33.828428],
+  [151.219221, -33.828789],
+  [151.218031, -33.828357],
+  [151.217556, -33.828182],
+  [151.216643, -33.828012],
+  [151.215612, -33.827750],
+  [151.214894, -33.827624],
+  [151.214199, -33.827631],
+  [151.213620, -33.827564],
+  [151.213160, -33.827499],
+  [151.212034, -33.827353],
+  [151.211322, -33.827262],
+  [151.210075, -33.827039],
+  [151.209384, -33.826946],
+  [151.208531, -33.826824],
+  [151.207410, -33.826658],
+  [151.206828, -33.826570],
+  [151.204132, -33.826152],
+  [151.202342, -33.825874],
+]
+
+const TIDAL_ROUTE_LABELS = [
+  { coord: [151.2406, -33.8224], label: 'Ourimbah Road' },
+  { coord: [151.2315, -33.8249], label: 'MacPherson Street' },
+  { coord: [151.2275, -33.8279], label: 'Gerard Street' },
+  { coord: [151.2226, -33.8290], label: 'Belgrave Street' },
+  { coord: [151.2120, -33.8274], label: 'Ernest Street' },
+]
+
 const BASE_STYLE = {
   version: 8,
   glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
@@ -449,6 +509,27 @@ function updateRouteSources(map, coords) {
   if (corridorSrc) corridorSrc.setData({ type: 'Feature', geometry: { type: 'Polygon', coordinates: [corridorPolygon(coords, 14)] } })
 }
 
+function tidalRouteCollection() {
+  return {
+    type: 'Feature',
+    properties: {
+      label: 'Tidal one-way system: AM inbound / PM outbound',
+    },
+    geometry: { type: 'LineString', coordinates: TIDAL_ROUTE_COORDS },
+  }
+}
+
+function tidalRoutePointCollection() {
+  return {
+    type: 'FeatureCollection',
+    features: TIDAL_ROUTE_LABELS.map(item => ({
+      type: 'Feature',
+      properties: { label: item.label },
+      geometry: { type: 'Point', coordinates: item.coord },
+    })),
+  }
+}
+
 const BUILDING_LAYER_IDS = ['bypass-buildings-extrusion', 'bypass-buildings-fill', 'bypass-buildings-lines']
 const PLAN_ZONE_LAYER_IDS = ['masterplan-zone-fill', 'masterplan-zone-line']
 const BYPASS_LAYER_IDS = [
@@ -459,13 +540,21 @@ const BYPASS_LAYER_IDS = [
   'bypass-line-mid',
   'bypass-line-centre',
 ]
+const TIDAL_LAYER_IDS = [
+  'tidal-route-corridor',
+  'tidal-route-halo',
+  'tidal-route-main',
+  'tidal-route-dashes',
+  'tidal-route-line-label',
+  'tidal-route-labels',
+]
 
 function setLayerVisibility(map, layerId, visible) {
   if (!map.getLayer(layerId)) return
   map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none')
 }
 
-function BypassMap3D({ showBypass, showOption1, showOption2, routeCalibrMode, routeCoords, onRouteChange }) {
+function BypassMap3D({ showBypass, showOption1, showOption2, showTidalRoute, routeCalibrMode, routeCoords, onRouteChange }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const loadedRef = useRef(false)
@@ -534,6 +623,11 @@ function BypassMap3D({ showBypass, showOption1, showOption2, routeCalibrMode, ro
       marker.getElement().style.display = showBypass ? '' : 'none'
     })
   }, [showBypass])
+
+  useEffect(() => {
+    if (!loadedRef.current || !mapRef.current) return
+    TIDAL_LAYER_IDS.forEach(id => setLayerVisibility(mapRef.current, id, showTidalRoute))
+  }, [showTidalRoute])
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -692,6 +786,94 @@ function BypassMap3D({ showBypass, showOption1, showOption2, routeCalibrMode, ro
         paint: { 'line-color': '#ffffff', 'line-width': 2, 'line-opacity': 0.9, 'line-dasharray': [3, 2] },
       })
 
+      map.addSource('tidal-route-corridor-source', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: {},
+          geometry: { type: 'Polygon', coordinates: [corridorPolygon(TIDAL_ROUTE_COORDS, 20)] },
+        },
+      })
+
+      map.addSource('tidal-route-line-source', {
+        type: 'geojson',
+        data: tidalRouteCollection(),
+      })
+
+      map.addSource('tidal-route-label-source', {
+        type: 'geojson',
+        data: tidalRoutePointCollection(),
+      })
+
+      map.addLayer({
+        id: 'tidal-route-corridor',
+        type: 'fill',
+        source: 'tidal-route-corridor-source',
+        paint: {
+          'fill-color': '#22d3ee',
+          'fill-opacity': 0.16,
+        },
+      })
+
+      map.addLayer({
+        id: 'tidal-route-halo',
+        type: 'line',
+        source: 'tidal-route-line-source',
+        paint: { 'line-color': '#0891b2', 'line-width': 22, 'line-opacity': 0.18, 'line-blur': 8 },
+      })
+
+      map.addLayer({
+        id: 'tidal-route-main',
+        type: 'line',
+        source: 'tidal-route-line-source',
+        paint: { 'line-color': '#06b6d4', 'line-width': 6, 'line-opacity': 0.92 },
+      })
+
+      map.addLayer({
+        id: 'tidal-route-dashes',
+        type: 'line',
+        source: 'tidal-route-line-source',
+        paint: { 'line-color': '#f0fdfa', 'line-width': 2, 'line-opacity': 0.9, 'line-dasharray': [1.2, 1.2] },
+      })
+
+      map.addLayer({
+        id: 'tidal-route-line-label',
+        type: 'symbol',
+        source: 'tidal-route-line-source',
+        layout: {
+          'symbol-placement': 'line',
+          'text-field': ['get', 'label'],
+          'text-size': 11,
+          'text-font': ['Open Sans Bold'],
+          'text-allow-overlap': false,
+          'text-rotation-alignment': 'map',
+        },
+        paint: {
+          'text-color': '#0f766e',
+          'text-halo-color': '#ecfeff',
+          'text-halo-width': 2,
+        },
+      })
+
+      map.addLayer({
+        id: 'tidal-route-labels',
+        type: 'symbol',
+        source: 'tidal-route-label-source',
+        layout: {
+          'text-field': ['get', 'label'],
+          'text-size': 10,
+          'text-font': ['Open Sans Bold'],
+          'text-offset': [0, 1.1],
+          'text-anchor': 'top',
+          'text-allow-overlap': false,
+        },
+        paint: {
+          'text-color': '#155e75',
+          'text-halo-color': '#ecfeff',
+          'text-halo-width': 2,
+        },
+      })
+
       // Endpoint markers
       ;[
         { coord: BYPASS_START, label: 'Warringah Fwy' },
@@ -718,6 +900,7 @@ function BypassMap3D({ showBypass, showOption1, showOption2, routeCalibrMode, ro
       BUILDING_LAYER_IDS.forEach(id => setLayerFilter(map, id, initBuildingFilter))
       PLAN_ZONE_LAYER_IDS.forEach(id => setLayerFilter(map, id, initZoneFilter))
       BYPASS_LAYER_IDS.forEach(id => setLayerVisibility(map, id, showBypass))
+      TIDAL_LAYER_IDS.forEach(id => setLayerVisibility(map, id, showTidalRoute))
       endpointMarkersRef.current.forEach(marker => {
         marker.getElement().style.display = showBypass ? '' : 'none'
       })
@@ -736,14 +919,24 @@ function BypassMap3D({ showBypass, showOption1, showOption2, routeCalibrMode, ro
       <div ref={containerRef} className="w-full" style={{ height: '500px' }} />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-slate-950/50 to-transparent" />
       <div className="pointer-events-none holo-scanlines absolute inset-0" />
-      {showBypass && (
-        <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-sm rounded-lg px-3 py-2 pointer-events-none">
-          <p className="text-xs font-bold text-red-400 uppercase tracking-widest">
-            {routeCalibrMode ? 'Calibration mode — drag numbered handles' : 'Overhead Bypass Route'}
-          </p>
-          <p className="text-xs text-slate-300 mt-0.5">Military Rd · Warringah Fwy → Spit Rd</p>
-        </div>
-      )}
+      <div className="absolute top-3 left-3 flex max-w-[calc(100%-5rem)] flex-col gap-2 pointer-events-none">
+        {showBypass && (
+          <div className="bg-slate-900/80 backdrop-blur-sm rounded-lg px-3 py-2">
+            <p className="text-xs font-bold text-red-400 uppercase tracking-widest">
+              {routeCalibrMode ? 'Calibration mode — drag numbered handles' : 'Overhead Bypass Route'}
+            </p>
+            <p className="text-xs text-slate-300 mt-0.5">Military Rd · Warringah Fwy → Spit Rd</p>
+          </div>
+        )}
+        {showTidalRoute && (
+          <div className="bg-cyan-950/80 backdrop-blur-sm rounded-lg px-3 py-2">
+            <p className="text-xs font-bold text-cyan-200 uppercase tracking-widest">
+              Tidal one-way proposal
+            </p>
+            <p className="text-xs text-cyan-50/85 mt-0.5">AM inbound · PM outbound · existing streets only</p>
+          </div>
+        )}
+      </div>
       <div className="absolute bottom-10 left-3 flex max-w-[min(740px,calc(100%-1.5rem))] flex-col gap-1.5">
         <button
           type="button"
@@ -755,6 +948,7 @@ function BypassMap3D({ showBypass, showOption1, showOption2, routeCalibrMode, ro
         {legendOpen && (
           <div className="pointer-events-none flex flex-col gap-1.5">
             {showBypass && <LegendPill color="#ef4444" label="Elevated bypass deck (8.5–11m)" />}
+            {showTidalRoute && <LegendPill color="#06b6d4" label="Tidal route = reversible one-way trial on existing parallel streets" />}
             {(showOption2 || showOption1) && (
               <>
                 <LegendPill gradient="linear-gradient(90deg,#bfdbfe,#5b8def,#60c7b2,#facc15,#fb923c,#ef4444)"
@@ -1037,6 +1231,7 @@ export default function BypassVisualization() {
   const [showBypass, setShowBypass] = useState(true)
   const [showOption1, setShowOption1] = useState(false)
   const [showOption2, setShowOption2] = useState(true)
+  const [showTidalRoute, setShowTidalRoute] = useState(true)
   const [routeCoords, setRouteCoords] = useState(() => BYPASS_ROUTE_COORDS.map(c => [...c]))
   const animT = useRef(0)
 
@@ -1088,6 +1283,10 @@ export default function BypassVisualization() {
           colorOn="bg-teal-600 text-white" colorOff="bg-slate-100 text-slate-600">
           Option 1 — Low &amp; Wide
         </ToggleBtn>
+        <ToggleBtn active={showTidalRoute} onClick={() => setShowTidalRoute(v => !v)}
+          colorOn="bg-cyan-600 text-white" colorOff="bg-slate-100 text-slate-600">
+          {showTidalRoute ? 'Tidal route ON' : 'Tidal route OFF'}
+        </ToggleBtn>
       </div>
 
       {/* 3D aerial map */}
@@ -1095,10 +1294,37 @@ export default function BypassVisualization() {
         showBypass={showBypass}
         showOption1={showOption1}
         showOption2={showOption2}
+        showTidalRoute={showTidalRoute}
         routeCalibrMode={false}
         routeCoords={routeCoords}
         onRouteChange={setRouteCoords}
       />
+
+      <div className="bg-cyan-50 border border-cyan-200 rounded-xl p-4 text-sm text-cyan-950 shadow-sm">
+        <p className="text-xs font-bold uppercase tracking-wider text-cyan-700 mb-1">
+          3. Tidal one-way system — Ernest Road parallel route
+        </p>
+        <p className="leading-relaxed">
+          The cyan corridor shows a proposed reversible traffic-flow trial using the existing parallel street network:
+          Ourimbah Road → MacPherson Street → Gerard Street → Belgrave Street → Ernest Street. The concept would run
+          inbound toward the city during the morning peak and outbound in the evening peak, helping distribute traffic
+          away from Military Road at the worst congestion periods.
+        </p>
+        <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+          <div className="rounded-lg border border-cyan-200 bg-white/70 p-3">
+            <p className="font-bold text-cyan-900">Why it is lower cost</p>
+            <p className="mt-1 text-cyan-900/75">Uses existing streets, signs, signal timing, and lane management rather than a new structure.</p>
+          </div>
+          <div className="rounded-lg border border-cyan-200 bg-white/70 p-3">
+            <p className="font-bold text-cyan-900">Why it is proven</p>
+            <p className="mt-1 text-cyan-900/75">Sydney Harbour Bridge already uses tidal lane allocation to match peak-direction demand.</p>
+          </div>
+          <div className="rounded-lg border border-cyan-200 bg-white/70 p-3">
+            <p className="font-bold text-cyan-900">What still needs checking</p>
+            <p className="mt-1 text-cyan-900/75">Traffic modelling, resident access, bus priority, school safety, signals, and emergency access.</p>
+          </div>
+        </div>
+      </div>
 
       {/* Street-level canvas */}
       <div>
