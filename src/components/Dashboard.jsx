@@ -115,6 +115,51 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {/* Use Instructions */}
+      <section className="bg-white border border-mosman-line rounded-xl p-6 shadow-sm">
+        <p className="text-xs font-bold uppercase tracking-wider text-mosman-teal mb-2">How to use this document</p>
+        <h3 className="text-xl font-bold text-slate-900 mb-3">
+          Read the evidence before forming a position
+        </h3>
+        <p className="text-sm leading-relaxed text-slate-600 mb-4">
+          This dashboard is intended to be used like a public briefing pack. Start with the existing planning controls,
+          then test the masterplan options against infrastructure, movement, parking, electricity capacity, and the
+          supporting reference documents. The goal is not to argue against change by default; it is to make sure any
+          growth proposal is matched with deliverable services, funding, timing, and accountability.
+        </p>
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
+          <InstructionStep
+            number="1"
+            title="Locate the area"
+            body="Open LEP Maps, find the street or precinct, and switch overlays on and off to see the legal controls and masterplan pressure together."
+          />
+          <InstructionStep
+            number="2"
+            title="Compare the options"
+            body="Use Bypass Viz and the Option 1 / Option 2 views to compare height, density, traffic movement, and likely streetscape impact."
+          />
+          <InstructionStep
+            number="3"
+            title="Check services"
+            body="Use Powerlines to test whether future EV charging, solar export, V2G, apartments, and commercial load create LV/HV upgrade pressure."
+          />
+          <InstructionStep
+            number="4"
+            title="Verify the source"
+            body="Open References when a claim needs proof. Treat the maps and scores as planning indicators, then confirm decisions against the source documents."
+          />
+          <InstructionStep
+            number="5"
+            title="Record the ask"
+            body="For each issue, write the practical question Council or the State must answer: what is missing, who funds it, and when it is delivered."
+          />
+        </div>
+        <p className="mt-4 text-xs leading-relaxed text-slate-500">
+          Note: the future-pressure ratings are risk indicators, not final engineering designs. They help identify where
+          more detailed Ausgrid, Council, traffic, parking, and development-capacity studies should be requested.
+        </p>
+      </section>
+
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard icon={Map} label="Current Maps" value={MAPS.filter(m => m.isCurrent).length} sub="across 10 types" color="text-mosman-teal" />
@@ -202,6 +247,18 @@ function SummaryCard({ icon: Icon, title, desc, onClick }) {
         </div>
       </div>
     </button>
+  )
+}
+
+function InstructionStep({ number, title, body }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-sm font-bold text-white">
+        {number}
+      </div>
+      <p className="text-sm font-bold text-slate-900">{title}</p>
+      <p className="mt-2 text-xs leading-relaxed text-slate-600">{body}</p>
+    </div>
   )
 }
 
