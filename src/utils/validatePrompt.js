@@ -43,7 +43,7 @@ ${suggestion.horizon20 || '(not provided)'}
 
 ---
 
-## REFERENCE LIBRARY (all 53 documents available to Mosman Council)
+## REFERENCE LIBRARY (${REFERENCE_DOCS.length} documents loaded in this app)
 
 ${docList}
 

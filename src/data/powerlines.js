@@ -19,24 +19,24 @@ export const POWERLINE_SOURCES = [
     note: 'Ausgrid directs users to Look Up and Live and BYDA for overhead and underground asset checks.',
   },
   {
-    label: 'NSW Service and Installation Rules, June 2025',
-    url: 'https://www.energy.nsw.gov.au/sites/default/files/2025-06/NSW-Service-and-Installation-Rules.pdf',
-    note: 'Current NSW service voltage and service cable sizing rules.',
+    label: 'NSW Service and Installation Rules, April 2026',
+    url: 'https://www.energy.nsw.gov.au/sites/default/files/2026-05/Service-and-Installation-Rules-NSW-April-2026.pdf',
+    note: 'Current NSW service connection and service cable sizing rules.',
   },
   {
     label: 'Ausgrid NS238 Supply Quality',
-    url: 'https://www.ausgrid.com.au/-/media/Documents/Technical-Documentation/NS/ns238.pdf?hash=C9AC61391301F48E1F6CCE3F5800A244812FC997&la=en',
-    note: 'Ausgrid voltage quality limits and typical medium/high-voltage distribution ranges.',
+    url: 'https://www.ausgrid.com.au/asp-and-contractors/technical-document-library',
+    note: 'Ausgrid supply quality standard. Use the technical document library to confirm the current NS238 revision.',
   },
   {
     label: 'Ausgrid NS125 Low Voltage Overhead Mains',
-    url: 'https://www.ausgrid.com.au/-/media/Documents/Technical-Documentation/NS/NS125.pdf',
-    note: 'Ausgrid LV aerial bundled cable and bare conductor selections.',
+    url: 'https://www.ausgrid.com.au/asp-and-contractors/technical-document-library',
+    note: 'Ausgrid LV overhead mains standard. Use the current NS125 revision for final conductor selection.',
   },
   {
     label: 'Ausgrid NS195 High Voltage Customer Connections',
-    url: 'https://www.ausgrid.com.au/-/media/Documents/Technical-Documentation/NS/NS195.pdf',
-    note: 'Ausgrid nominal HV supply voltage and customer connection advice.',
+    url: 'https://www.ausgrid.com.au/asp-and-contractors/technical-document-library',
+    note: 'Ausgrid HV customer connection standard. Use the current NS195 revision before any project commitment.',
   },
   {
     label: 'Geoscience Australia National Electricity Infrastructure',
@@ -164,5 +164,9 @@ export const SERVICE_SIZING = {
     '4 x 95 mm2 LV ABC',
     '4 x 150 mm2 LV ABC',
     'Selected bare conductors include AAC Mercury/Pluto and ACSR Apple/Cherry/Raisin families.',
+  ],
+  serviceSpanNotes: [
+    'Typical maximum overhead service span is 50 m for 100 A services.',
+    'Services above 100 A are typically limited to 30 m spans.',
   ],
 }

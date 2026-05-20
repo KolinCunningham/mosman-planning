@@ -139,6 +139,74 @@ body {
   color: #475569;
 }
 
+.network-rating-scale span strong {
+  display: block;
+  margin-bottom: 0.1rem;
+  font-size: 0.66rem;
+  color: #0f172a;
+}
+
+.network-rating-scale-critical {
+  border: 1px solid rgba(244, 63, 94, 0.28);
+  background: rgba(255, 228, 230, 0.82) !important;
+  color: #be123c !important;
+}
+
+.network-rating-scale-high {
+  border: 1px solid rgba(249, 115, 22, 0.28);
+  background: rgba(255, 237, 213, 0.82) !important;
+  color: #c2410c !important;
+}
+
+.network-rating-scale-constrained {
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  background: rgba(254, 243, 199, 0.82) !important;
+  color: #a16207 !important;
+}
+
+.network-rating-scale-monitor {
+  border: 1px solid rgba(20, 184, 166, 0.24);
+  background: rgba(204, 251, 241, 0.62) !important;
+  color: #0f766e !important;
+}
+
+.risk-score-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  padding: 0.16rem 0.45rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.risk-score-badge-critical {
+  border-color: rgba(244, 63, 94, 0.22);
+  background: #ffe4e6;
+  color: #be123c;
+}
+
+.risk-score-badge-high {
+  border-color: rgba(249, 115, 22, 0.24);
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.risk-score-badge-constrained {
+  border-color: rgba(245, 158, 11, 0.24);
+  background: #fef3c7;
+  color: #a16207;
+}
+
+.risk-score-badge-monitor {
+  border-color: rgba(20, 184, 166, 0.22);
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
 .issue-summary-column {
   border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 8px;

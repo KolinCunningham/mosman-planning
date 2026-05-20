@@ -28,12 +28,12 @@ export default function SessionLog() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-white">Session Log</h2>
+          <h2 className="text-xl font-bold text-slate-900">Session Log</h2>
           <p className="text-slate-500 text-sm">{suggestions.length} suggestions · {mapChanges.length} map changes</p>
         </div>
         <div className="flex gap-2">
           <button onClick={exportAll}
-            className="flex items-center gap-2 bg-slate-100 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm">
+            className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-sm">
             <Download size={14} /> Export JSON
           </button>
           <button onClick={clearAll}
@@ -59,7 +59,7 @@ export default function SessionLog() {
                     <span className="text-xs text-slate-500">{s.priority}</span>
                     {s.mapChangeRequired && <span className="text-xs bg-blue-900 text-blue-300 px-2 py-0.5 rounded">MAP CHANGE REQ.</span>}
                   </div>
-                  <p className="text-white font-medium text-sm">{s.title}</p>
+                  <p className="text-slate-900 font-medium text-sm">{s.title}</p>
                   <p className="text-xs text-slate-500 mt-0.5">{s.createdAt ? new Date(s.createdAt).toLocaleString('en-AU') : '—'}</p>
                   {s.auditPassed === false && (
                     <p className="text-xs text-yellow-500 mt-1">
@@ -90,7 +90,7 @@ export default function SessionLog() {
                     <span key={code} className={`text-xs ${MAP_TYPES[code]?.color || 'bg-slate-600'} text-white px-1.5 py-0.5 rounded font-mono`}>{code}</span>
                   ))}
                 </div>
-                <p className="text-white font-medium text-sm">{m.title || '(untitled)'}</p>
+                <p className="text-slate-900 font-medium text-sm">{m.title || '(untitled)'}</p>
                 <p className="text-xs text-slate-500 mt-0.5">{m.affectedArea}</p>
                 {m.dwgFile && <p className="text-xs text-mosman-teal mt-0.5 font-mono">{m.dwgFile}</p>}
                 <p className="text-xs text-slate-600 mt-0.5">{m.createdAt ? new Date(m.createdAt).toLocaleString('en-AU') : '—'}</p>
@@ -125,7 +125,7 @@ function EmptyState({ msg, action, actionLabel }) {
 
 function StatusBadge({ status }) {
   const colors = {
-    DRAFT: 'bg-slate-700 text-slate-700',
+    DRAFT: 'bg-slate-100 text-slate-700',
     AUDITED: 'bg-blue-900 text-blue-300',
     DWG_PENDING: 'bg-yellow-900 text-yellow-300',
     DWG_COMPLETE: 'bg-green-900 text-green-300',

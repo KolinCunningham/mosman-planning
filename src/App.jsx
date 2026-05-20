@@ -1,5 +1,5 @@
 import { Routes, Route, NavLink } from 'react-router-dom'
-import { Map, LayoutDashboard, Menu, X, BookOpen, Zap, Building2, MessageSquare } from 'lucide-react'
+import { Map, LayoutDashboard, Menu, X, BookOpen, Zap, Building2, MessageSquare, ListChecks, ClipboardList } from 'lucide-react'
 import { useState } from 'react'
 import Dashboard from './components/Dashboard'
 import MapViewer from './components/MapViewer'
@@ -7,13 +7,19 @@ import ReferenceLibrary from './components/ReferenceLibrary'
 import PowerlineData from './components/PowerlineData'
 import BypassVisualization from './components/BypassVisualization'
 import CouncilSubmission from './components/CouncilSubmission'
+import SuggestionList from './components/SuggestionList'
+import SuggestionForm from './components/SuggestionForm'
+import MapChangeForm from './components/MapChangeForm'
+import SessionLog from './components/SessionLog'
 
 const nav = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/suggestions', icon: ListChecks, label: 'Suggestions' },
   { to: '/maps', icon: Map, label: 'LEP Maps' },
   { to: '/bypass', icon: Building2, label: 'Bypass Viz' },
   { to: '/powerlines', icon: Zap, label: 'Powerlines' },
   { to: '/references', icon: BookOpen, label: 'References' },
+  { to: '/log', icon: ClipboardList, label: 'Log' },
   { to: '/submission', icon: MessageSquare, label: 'Submission' },
 ]
 
@@ -67,6 +73,11 @@ export default function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/suggestions" element={<SuggestionList />} />
+          <Route path="/new" element={<SuggestionForm />} />
+          <Route path="/new/:id" element={<SuggestionForm />} />
+          <Route path="/map-change" element={<MapChangeForm />} />
+          <Route path="/log" element={<SessionLog />} />
           <Route path="/maps" element={<MapViewer />} />
           <Route path="/powerlines" element={<PowerlineData />} />
           <Route path="/references" element={<ReferenceLibrary />} />

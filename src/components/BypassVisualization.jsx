@@ -75,6 +75,323 @@ function corridorPolygon(coords, halfWidthM = 11) {
   return [...left, ...right.reverse(), left[0]]
 }
 
+const STOREY_BANDS = {
+  '3-4':  { storeys: 4,  color: '#bfdbfe', use: 'Residential dwellings', shape: 'Low slab / townhouse' },
+  '5-8':  { storeys: 8,  color: '#5b8def', use: 'Residential apartments', shape: 'Mid-rise slab' },
+  '9-15': { storeys: 12, color: '#60c7b2', use: 'Mixed-use / shops', shape: 'Podium block' },
+  '16-20': { storeys: 18, color: '#facc15', use: 'Commercial centre / large mixed-use', shape: 'Tall podium tower' },
+  '21-25': { storeys: 22, color: '#fb923c', use: 'Large mixed-use buildings', shape: 'Gateway tower' },
+  '26-28': { storeys: 28, color: '#ef4444', use: 'Major centre peak buildings', shape: 'Peak tower' },
+}
+
+// Western Mosman LGA edge sampled from the OSM administrative boundary.
+// This keeps the masterplan height overlay out of Cremorne / Neutral Bay.
+const MOSMAN_WEST_EDGE_BY_LAT = [
+  [-33.8375, 151.22839],
+  [-33.8360, 151.22871],
+  [-33.8345, 151.22902],
+  [-33.8330, 151.22932],
+  [-33.8315, 151.22965],
+  [-33.8300, 151.22996],
+  [-33.8285, 151.23028],
+  [-33.8270, 151.23105],
+  [-33.8255, 151.23135],
+  [-33.8240, 151.23164],
+  [-33.8225, 151.23194],
+  [-33.8210, 151.23225],
+  [-33.8195, 151.23267],
+]
+
+function mosmanWestEdgeLng(lat) {
+  const edge = MOSMAN_WEST_EDGE_BY_LAT
+  if (lat <= edge[0][0]) return edge[0][1]
+  if (lat >= edge[edge.length - 1][0]) return edge[edge.length - 1][1]
+
+  for (let i = 0; i < edge.length - 1; i++) {
+    const [latA, lngA] = edge[i]
+    const [latB, lngB] = edge[i + 1]
+    if (lat >= latA && lat <= latB) {
+      const t = (lat - latA) / (latB - latA)
+      return lngA + (lngB - lngA) * t
+    }
+  }
+  return edge[edge.length - 1][1]
+}
+
+function insideMosmanMasterplanEdge(lng, lat) {
+  return lng >= mosmanWestEdgeLng(lat)
+}
+
+function clampToMosmanMasterplanEdge([lng, lat]) {
+  return [Math.max(lng, mosmanWestEdgeLng(lat)), lat]
+}
+
+// Approximate masterplan polygons digitised from booklet pages 23 and 25.
+// They intentionally follow the mapped area-of-change shapes rather than broad
+// rectangular longitude/latitude bands.
+const MASTERPLAN_ZONES = [
+  // Option 1 - Low and wide: 13% LGA, 3-20 storeys.
+  {
+    option: 'option1',
+    id: 'o1-spit-junction-peak',
+    label: 'Option 1 Spit Junction peak',
+    band: '16-20',
+    polygon: [
+      [151.2359, -33.8249],
+      [151.2409, -33.8257],
+      [151.2444, -33.8235],
+      [151.2437, -33.8205],
+      [151.2392, -33.8200],
+      [151.2363, -33.8222],
+      [151.2359, -33.8249],
+    ],
+  },
+  {
+    option: 'option1',
+    id: 'o1-spit-road-mixed-use',
+    label: 'Option 1 Spit Road mixed-use spine',
+    band: '9-15',
+    polygon: [
+      [151.2422, -33.8245],
+      [151.2446, -33.8237],
+      [151.24455, -33.81495],
+      [151.2432, -33.81495],
+      [151.24275, -33.8171],
+      [151.2422, -33.8245],
+    ],
+  },
+  {
+    option: 'option1',
+    id: 'o1-military-centre-mixed-use',
+    label: 'Option 1 Military Road centre spine',
+    band: '9-15',
+    polygon: [
+      [151.2164, -33.8319],
+      [151.2257, -33.8313],
+      [151.2354, -33.8272],
+      [151.2394, -33.8243],
+      [151.2367, -33.8219],
+      [151.2257, -33.8257],
+      [151.2162, -33.8288],
+      [151.2164, -33.8319],
+    ],
+  },
+  {
+    option: 'option1',
+    id: 'o1-military-mid-rise',
+    label: 'Option 1 Military Road mid-rise transition',
+    band: '5-8',
+    polygon: [
+      [151.2140, -33.8358],
+      [151.2252, -33.8351],
+      [151.2388, -33.8307],
+      [151.2462, -33.8271],
+      [151.2442, -33.8233],
+      [151.2353, -33.8250],
+      [151.2251, -33.8277],
+      [151.2147, -33.8295],
+      [151.2140, -33.8358],
+    ],
+  },
+  {
+    option: 'option1',
+    id: 'o1-low-wide-residential',
+    label: 'Option 1 broader residential change area',
+    band: '3-4',
+    polygon: [
+      [151.2127, -33.8411],
+      [151.2230, -33.8394],
+      [151.2328, -33.8348],
+      [151.2462, -33.8316],
+      [151.2470, -33.8254],
+      [151.2385, -33.8227],
+      [151.2260, -33.8257],
+      [151.2150, -33.8281],
+      [151.2129, -33.8328],
+      [151.2127, -33.8411],
+    ],
+  },
+
+  // Option 2 - High and narrow: 9% LGA, 3-28 storeys.
+  {
+    option: 'option2',
+    id: 'o2-spit-junction-peak',
+    label: 'Option 2 Spit Junction 26-28 storey peak',
+    band: '26-28',
+    polygon: [
+      [151.2373, -33.8241],
+      [151.2419, -33.8248],
+      [151.2445, -33.8225],
+      [151.2423, -33.8199],
+      [151.2384, -33.8205],
+      [151.2368, -33.8226],
+      [151.2373, -33.8241],
+    ],
+  },
+  {
+    option: 'option2',
+    id: 'o2-centre-gateway',
+    label: 'Option 2 21-25 storey gateway',
+    band: '21-25',
+    polygon: [
+      [151.2319, -33.8272],
+      [151.2376, -33.8271],
+      [151.2403, -33.8245],
+      [151.2370, -33.8219],
+      [151.2306, -33.8242],
+      [151.2319, -33.8272],
+    ],
+  },
+  {
+    option: 'option2',
+    id: 'o2-activity-core',
+    label: 'Option 2 16-20 storey activity core',
+    band: '16-20',
+    polygon: [
+      [151.2314, -33.8287],
+      [151.2361, -33.8277],
+      [151.2410, -33.8242],
+      [151.2379, -33.8224],
+      [151.2328, -33.8241],
+      [151.2311, -33.8266],
+      [151.2314, -33.8287],
+    ],
+  },
+  {
+    option: 'option2',
+    id: 'o2-spit-road-spine',
+    label: 'Option 2 9-15 storey Spit Road spine',
+    band: '9-15',
+    polygon: [
+      [151.24245, -33.82425],
+      [151.24435, -33.82365],
+      [151.24445, -33.8150],
+      [151.2433, -33.8150],
+      [151.24295, -33.8172],
+      [151.24245, -33.82425],
+    ],
+  },
+  {
+    option: 'option2',
+    id: 'o2-military-shoulders',
+    label: 'Option 2 5-8 storey corridor shoulders',
+    band: '5-8',
+    polygon: [
+      [151.2145, -33.8344],
+      [151.2264, -33.8329],
+      [151.2383, -33.8280],
+      [151.2414, -33.8241],
+      [151.2373, -33.8217],
+      [151.2255, -33.8246],
+      [151.2148, -33.8280],
+      [151.2145, -33.8344],
+    ],
+  },
+  {
+    option: 'option2',
+    id: 'o2-low-rise-edges',
+    label: 'Option 2 3-4 storey narrow edge',
+    band: '3-4',
+    polygon: [
+      [151.2128, -33.8396],
+      [151.2192, -33.8363],
+      [151.2295, -33.8322],
+      [151.2416, -33.8272],
+      [151.2461, -33.8241],
+      [151.2449, -33.8210],
+      [151.2375, -33.8213],
+      [151.2258, -33.8240],
+      [151.2137, -33.8277],
+      [151.2128, -33.8396],
+    ],
+  },
+]
+
+function zoneMeta(zone) {
+  return STOREY_BANDS[zone.band]
+}
+
+function pointInPolygon(point, polygon) {
+  const [x, y] = point
+  let inside = false
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i][0], yi = polygon[i][1]
+    const xj = polygon[j][0], yj = polygon[j][1]
+    const intersects = ((yi > y) !== (yj > y)) &&
+      (x < ((xj - xi) * (y - yi)) / ((yj - yi) || 1e-9) + xi)
+    if (intersects) inside = !inside
+  }
+  return inside
+}
+
+function masterplanZoneFor(option, lng, lat) {
+  if (!insideMosmanMasterplanEdge(lng, lat)) return null
+  return MASTERPLAN_ZONES.find(zone =>
+    zone.option === option && pointInPolygon([lng, lat], zone.polygon)
+  )
+}
+
+function withMasterplanAttributes(collection) {
+  return {
+    ...collection,
+    features: collection.features.map(feature => {
+      const lng = feature.properties.centroid_lng
+      const lat = feature.properties.centroid_lat
+      const option1Zone = masterplanZoneFor('option1', lng, lat)
+      const option2Zone = masterplanZoneFor('option2', lng, lat)
+      const option1Meta = option1Zone ? zoneMeta(option1Zone) : null
+      const option2Meta = option2Zone ? zoneMeta(option2Zone) : null
+
+      return {
+        ...feature,
+        properties: {
+          ...feature.properties,
+          option1Zone: option1Zone?.id || '',
+          option1Label: option1Zone?.label || '',
+          option1Band: option1Zone?.band || '',
+          option1Storeys: option1Meta?.storeys || 0,
+          option1Color: option1Meta?.color || '#64748b',
+          option1Use: option1Meta?.use || 'Existing building',
+          option1Shape: option1Meta?.shape || 'Current footprint',
+          option2Zone: option2Zone?.id || '',
+          option2Label: option2Zone?.label || '',
+          option2Band: option2Zone?.band || '',
+          option2Storeys: option2Meta?.storeys || 0,
+          option2Color: option2Meta?.color || '#64748b',
+          option2Use: option2Meta?.use || 'Existing building',
+          option2Shape: option2Meta?.shape || 'Current footprint',
+        },
+      }
+    }),
+  }
+}
+
+const MASTERPLAN_BUILDINGS = withMasterplanAttributes(OSM_BUILDINGS)
+
+function masterplanZoneCollection() {
+  return {
+    type: 'FeatureCollection',
+    features: MASTERPLAN_ZONES.map(zone => {
+      const meta = zoneMeta(zone)
+      const displayPolygon = zone.polygon.map(clampToMosmanMasterplanEdge)
+      return {
+        type: 'Feature',
+        properties: {
+          option: zone.option,
+          id: zone.id,
+          label: zone.label,
+          band: zone.band,
+          storeys: meta.storeys,
+          color: meta.color,
+          use: meta.use,
+          shape: meta.shape,
+        },
+        geometry: { type: 'Polygon', coordinates: [[...displayPolygon, displayPolygon[0]]] },
+      }
+    }),
+  }
+}
+
 // Heights gradient west→east matching masterplan storey bands:
 //
 // Option 1 (Low & Wide, 3-20F, page 23):
@@ -90,94 +407,39 @@ function corridorPolygon(coords, halfWidthM = 11) {
 // 1F ≈ 3.3m. 4F = 13.2m → ×2.1. 8F = 26.4m → ×4.1. 15F = 49.5m → ×7.7. 20F = 66m → ×10.3. 28F = 92.4m → ×14.4
 function buildingHeightExpr(showOption1, showOption2) {
   if (showOption2) {
-    // Option 2: yellow (16-20F) is DOMINANT throughout the whole corridor (page 25)
-    // — not a gradual ramp from blue. Green/yellow from the western entry, orange/red
-    // only concentrated at Spit Junction.
-    return ['*', ['get', 'height'],
-      ['interpolate', ['linear'], ['get', 'centroid_lng'],
-        151.215, 5.0,   // ~10F — green (entering at Cremorne — corridor already tall)
-        151.222, 8.0,   // ~16F — yellow (established corridor body)
-        151.230, 9.0,   // ~18F — yellow (Military Rd central)
-        151.237, 11.0,  // ~22F — orange (approaching Spit Junction)
-        151.241, 13.0,  // ~26F — orange/red (near junction)
-        151.244, 14.5,  // ~28F — red (Spit Junction peak)
-      ]
-    ]
+    return ['*', ['get', 'option2Storeys'], FLOORS_PER_METRE]
   }
   if (showOption1) {
-    return ['*', ['get', 'height'],
-      ['interpolate', ['linear'], ['get', 'centroid_lng'],
-        151.215, 1.8,   // 3-4F — light blue (broad outer area)
-        151.224, 2.0,   // 4F — light blue (still outer area)
-        151.230, 2.8,   // 5-6F — blue (Military Rd corridor)
-        151.236, 4.5,   // 8-9F — blue/green (approaching node)
-        151.240, 6.5,   // 12-13F — green (Spit Junction approach)
-        151.244, 9.5,   // 18-20F — yellow (Spit Junction peak)
-      ]
-    ]
+    return ['*', ['get', 'option1Storeys'], FLOORS_PER_METRE]
   }
   return ['get', 'height']
 }
 
 function buildingColorExpr(showOption1, showOption2) {
   if (showOption2) {
-    // Option 2 colours (page 25): yellow is the DOMINANT corridor colour.
-    // Green at western entry, yellow through most of the route,
-    // orange/red only at Spit Junction. Matches the large yellow area on page 25.
-    return [
-      'interpolate', ['linear'], ['get', 'centroid_lng'],
-      151.215, '#22c55e',  // green — ~10F entering at Cremorne
-      151.222, '#eab308',  // yellow — 16-20F (dominant throughout corridor)
-      151.233, '#eab308',  // yellow — maintain through Military Rd central
-      151.238, '#f97316',  // orange — 21-25F approaching Spit Junction
-      151.242, '#ef4444',  // red — 26-28F Spit Junction peak
-    ]
+    return ['get', 'option2Color']
   }
   if (showOption1) {
-    // Option 1 masterplan colours (page 23 key):
-    // light blue=3-4F (dominant, outer area), blue=5-8F (corridor), green=9-15F, yellow=16-20F peak
-    // Blue dominates until very close to Spit Junction
-    return [
-      'interpolate', ['linear'], ['get', 'centroid_lng'],
-      151.215, '#bfdbfe',  // light blue — 3-4F (most of the broad area)
-      151.226, '#60a5fa',  // medium blue — 5-6F (Military Rd corridor)
-      151.232, '#3b82f6',  // blue — 7-8F (corridor)
-      151.238, '#22c55e',  // green — 9-15F (near Spit Junction)
-      151.242, '#eab308',  // yellow — 16-20F (Spit Junction peak only)
-    ]
+    return ['get', 'option1Color']
   }
   return '#64748b'
 }
 
-function optionBuildingFilter(showOption2, routeCoords) {
-  if (showOption2) {
-    // Option 2 = High & Narrow: tight corridor (~300m each side of Military/Spit Rd)
-    // Use centroid_lng/lat property comparisons — ['within'] is unreliable for
-    // GeoJSON polygon features in MapLibre and returns nothing.
-    const lngs = routeCoords.map(c => c[0])
-    const lats = routeCoords.map(c => c[1])
-    const pad = 0.003
-    return ['all',
-      ['>=', ['get', 'centroid_lng'], Math.min(...lngs) - pad],
-      ['<=', ['get', 'centroid_lng'], Math.max(...lngs) + pad],
-      ['>=', ['get', 'centroid_lat'], Math.min(...lats) - pad],
-      ['<=', ['get', 'centroid_lat'], Math.max(...lats) + pad],
-    ]
-  }
-  // Option 1 = Low & Wide (13% LGA): Military Rd corridor + surrounding blocks
-  // Exclude scenic protection areas:
-  //   - Cremorne Point / far-south residential (lat < -33.836)
-  //   - Mosman Bay / Athol Wharf waterfront (lng > 151.234 AND lat < -33.824)
-  return ['all',
-    ['>=', ['get', 'centroid_lng'], 151.211],
-    ['<=', ['get', 'centroid_lng'], 151.249],
-    ['>=', ['get', 'centroid_lat'], -33.836],
-    ['<=', ['get', 'centroid_lat'], -33.808],
-    ['!', ['all',
-      ['>', ['get', 'centroid_lng'], 151.234],
-      ['<', ['get', 'centroid_lat'], -33.824],
-    ]],
-  ]
+function optionBuildingFilter(showOption1, showOption2) {
+  if (showOption2) return ['>', ['get', 'option2Storeys'], 0]
+  if (showOption1) return ['>', ['get', 'option1Storeys'], 0]
+  return null
+}
+
+function optionZoneFilter(showOption1, showOption2) {
+  if (showOption2) return ['==', ['get', 'option'], 'option2']
+  if (showOption1) return ['==', ['get', 'option'], 'option1']
+  return ['==', ['get', 'option'], 'none']
+}
+
+function setLayerFilter(map, layerId, filter) {
+  if (!map.getLayer(layerId)) return
+  map.setFilter(layerId, filter || null)
 }
 
 function updateRouteSources(map, coords) {
@@ -188,13 +450,29 @@ function updateRouteSources(map, coords) {
 }
 
 const BUILDING_LAYER_IDS = ['bypass-buildings-extrusion', 'bypass-buildings-fill', 'bypass-buildings-lines']
+const PLAN_ZONE_LAYER_IDS = ['masterplan-zone-fill', 'masterplan-zone-line']
+const BYPASS_LAYER_IDS = [
+  'bypass-ground-shadow',
+  'bypass-columns',
+  'bypass-deck',
+  'bypass-line-halo',
+  'bypass-line-mid',
+  'bypass-line-centre',
+]
 
-function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, onRouteChange }) {
+function setLayerVisibility(map, layerId, visible) {
+  if (!map.getLayer(layerId)) return
+  map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none')
+}
+
+function BypassMap3D({ showBypass, showOption1, showOption2, routeCalibrMode, routeCoords, onRouteChange }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const loadedRef = useRef(false)
   const routeMarkersRef = useRef([])
+  const endpointMarkersRef = useRef([])
   const routeCoordsRef = useRef(null)
+  const [legendOpen, setLegendOpen] = useState(true)
 
   useEffect(() => {
     if (!loadedRef.current || !mapRef.current) return
@@ -202,15 +480,17 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
     map.setPaintProperty('bypass-buildings-extrusion', 'fill-extrusion-height', buildingHeightExpr(showOption1, showOption2))
     map.setPaintProperty('bypass-buildings-extrusion', 'fill-extrusion-color', buildingColorExpr(showOption1, showOption2))
     map.setPaintProperty('bypass-buildings-extrusion', 'fill-extrusion-opacity', showOption1 || showOption2 ? 0.72 : 0.3)
-    const filter = optionBuildingFilter(showOption2, routeCoords || BYPASS_ROUTE_COORDS)
-    BUILDING_LAYER_IDS.forEach(id => map.setFilter(id, filter))
-  }, [showOption1, showOption2, routeCoords])
+    const buildingFilter = optionBuildingFilter(showOption1, showOption2)
+    const zoneFilter = optionZoneFilter(showOption1, showOption2)
+    BUILDING_LAYER_IDS.forEach(id => setLayerFilter(map, id, buildingFilter))
+    PLAN_ZONE_LAYER_IDS.forEach(id => setLayerFilter(map, id, zoneFilter))
+  }, [showOption1, showOption2])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !loadedRef.current) return
 
-    if (routeCalibrMode) {
+    if (routeCalibrMode && showBypass) {
       map.easeTo({ pitch: 0, bearing: 0, duration: 500 })
       const initCoords = (routeCoords || BYPASS_ROUTE_COORDS).map(c => [...c])
       routeCoordsRef.current = initCoords
@@ -244,7 +524,16 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
       routeMarkersRef.current = []
       map.easeTo({ pitch: 52, bearing: -18, duration: 500 })
     }
-  }, [routeCalibrMode])
+  }, [routeCalibrMode, showBypass])
+
+  useEffect(() => {
+    if (!loadedRef.current || !mapRef.current) return
+    const map = mapRef.current
+    BYPASS_LAYER_IDS.forEach(id => setLayerVisibility(map, id, showBypass))
+    endpointMarkersRef.current.forEach(marker => {
+      marker.getElement().style.display = showBypass ? '' : 'none'
+    })
+  }, [showBypass])
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -275,7 +564,33 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
       // Fly to Military Road corridor at zoom where buildings are clearly visible
       map.flyTo({ center: [151.230, -33.822], zoom: 14.5, pitch: 52, bearing: -18, duration: 800 })
 
-      map.addSource('bypass-osm-buildings', { type: 'geojson', data: OSM_BUILDINGS })
+      map.addSource('masterplan-zones', { type: 'geojson', data: masterplanZoneCollection() })
+
+      map.addLayer({
+        id: 'masterplan-zone-fill',
+        type: 'fill',
+        source: 'masterplan-zones',
+        paint: {
+          'fill-color': ['get', 'color'],
+          'fill-opacity': 0.18,
+        },
+        filter: optionZoneFilter(showOption1, showOption2),
+      })
+
+      map.addLayer({
+        id: 'masterplan-zone-line',
+        type: 'line',
+        source: 'masterplan-zones',
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': ['interpolate', ['linear'], ['zoom'], 13, 1.2, 16, 2.8],
+          'line-opacity': 0.74,
+          'line-dasharray': [2, 1.4],
+        },
+        filter: optionZoneFilter(showOption1, showOption2),
+      })
+
+      map.addSource('bypass-osm-buildings', { type: 'geojson', data: MASTERPLAN_BUILDINGS })
 
       map.addLayer({
         id: 'bypass-buildings-fill',
@@ -389,16 +704,23 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
           'background:rgba(239,68,68,0.22)',
           'box-shadow:0 0 16px rgba(239,68,68,0.6)',
         ].join(';')
-        new maplibregl.Marker({ element: el })
+        const marker = new maplibregl.Marker({ element: el })
           .setLngLat(coord)
           .setPopup(new maplibregl.Popup({ closeButton: false, offset: 20 })
             .setHTML(`<div style="font-size:11px;font-weight:700;color:#0f172a">${label}</div>`))
           .addTo(map)
+        endpointMarkersRef.current.push(marker)
       })
 
       // Apply initial building filter now that all layers exist
-      const initFilter = optionBuildingFilter(showOption2, routeCoords || BYPASS_ROUTE_COORDS)
-      BUILDING_LAYER_IDS.forEach(id => map.setFilter(id, initFilter))
+      const initBuildingFilter = optionBuildingFilter(showOption1, showOption2)
+      const initZoneFilter = optionZoneFilter(showOption1, showOption2)
+      BUILDING_LAYER_IDS.forEach(id => setLayerFilter(map, id, initBuildingFilter))
+      PLAN_ZONE_LAYER_IDS.forEach(id => setLayerFilter(map, id, initZoneFilter))
+      BYPASS_LAYER_IDS.forEach(id => setLayerVisibility(map, id, showBypass))
+      endpointMarkersRef.current.forEach(marker => {
+        marker.getElement().style.display = showBypass ? '' : 'none'
+      })
     })
 
     return () => {
@@ -414,19 +736,40 @@ function BypassMap3D({ showOption1, showOption2, routeCalibrMode, routeCoords, o
       <div ref={containerRef} className="w-full" style={{ height: '500px' }} />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-slate-950/50 to-transparent" />
       <div className="pointer-events-none holo-scanlines absolute inset-0" />
-      <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-sm rounded-lg px-3 py-2 pointer-events-none">
-        <p className="text-xs font-bold text-red-400 uppercase tracking-widest">
-          {routeCalibrMode ? 'Calibration mode — drag numbered handles' : 'Overhead Bypass Route'}
-        </p>
-        <p className="text-xs text-slate-300 mt-0.5">Military Rd · Warringah Fwy → Spit Rd</p>
-      </div>
-      <div className="absolute bottom-10 left-3 flex flex-col gap-1.5 pointer-events-none">
-        <LegendPill color="#ef4444" label="Elevated bypass deck (8.5–11m)" />
-        {(showOption2 || showOption1) && (
-          <LegendPill gradient="linear-gradient(90deg,#22d3ee,#a78bfa,#f472b6)"
-            label={showOption2
-            ? 'Option 2 — High & Narrow · 9% LGA · 3–28F · red=Spit Junction peak'
-            : 'Option 1 — Low & Wide · 13% LGA · 3–20F · yellow=Spit Junction peak'} />
+      {showBypass && (
+        <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-sm rounded-lg px-3 py-2 pointer-events-none">
+          <p className="text-xs font-bold text-red-400 uppercase tracking-widest">
+            {routeCalibrMode ? 'Calibration mode — drag numbered handles' : 'Overhead Bypass Route'}
+          </p>
+          <p className="text-xs text-slate-300 mt-0.5">Military Rd · Warringah Fwy → Spit Rd</p>
+        </div>
+      )}
+      <div className="absolute bottom-10 left-3 flex max-w-[min(740px,calc(100%-1.5rem))] flex-col gap-1.5">
+        <button
+          type="button"
+          onClick={() => setLegendOpen(open => !open)}
+          className="pointer-events-auto w-fit rounded bg-slate-900/75 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-100 backdrop-blur-sm"
+        >
+          {legendOpen ? 'Hide legend' : 'Show legend'}
+        </button>
+        {legendOpen && (
+          <div className="pointer-events-none flex flex-col gap-1.5">
+            {showBypass && <LegendPill color="#ef4444" label="Elevated bypass deck (8.5–11m)" />}
+            {(showOption2 || showOption1) && (
+              <>
+                <LegendPill gradient="linear-gradient(90deg,#bfdbfe,#5b8def,#60c7b2,#facc15,#fb923c,#ef4444)"
+                label={showOption2
+                  ? 'Option 2 — High & Narrow · booklet p25 · 3–28F'
+                  : 'Option 1 — Low & Wide · booklet p23 · 3–20F'} />
+                <LegendPill color="rgba(191,219,254,0.7)" label="Blue tint = lower-storey masterplan edge, clipped to Mosman LGA" />
+                <LegendPill color="rgba(96,199,178,0.7)" label="Teal tint = 9–15 storey mixed-use / shops spine, clipped before foreshore" />
+                <LegendPill color="rgba(91,141,239,0.7)" label="Dark blue tint = 5–8 storey apartment shoulder" />
+                {showOption2 && <LegendPill color="rgba(250,204,21,0.75)" label="Yellow tint = 16–20 storey activity core" />}
+                {showOption2 && <LegendPill color="rgba(251,146,60,0.75)" label="Orange tint = 21–25 storey gateway" />}
+                <LegendPill color="rgba(239,68,68,0.75)" label={showOption2 ? 'Red tint = 26–28 storey Spit Junction peak' : 'Red/yellow tint = highest Option 1 centre peak'} />
+              </>
+            )}
+          </div>
         )}
       </div>
     </div>
@@ -734,7 +1077,11 @@ export default function BypassVisualization() {
 
       {/* Shared toggles */}
       <div className="flex flex-wrap gap-2">
-        <ToggleBtn active={showBypass} onClick={() => setShowBypass(v => !v)}
+        <ToggleBtn active={showBypass} onClick={() => setShowBypass(v => {
+          const next = !v
+          if (!next) setRouteCalibrMode(false)
+          return next
+        })}
           colorOn="bg-slate-700 text-white" colorOff="bg-slate-100 text-slate-600">
           {showBypass ? 'Bypass ON' : 'Bypass OFF'}
         </ToggleBtn>
@@ -746,14 +1093,14 @@ export default function BypassVisualization() {
           colorOn="bg-teal-600 text-white" colorOff="bg-slate-100 text-slate-600">
           Option 1 — Low &amp; Wide
         </ToggleBtn>
-        <ToggleBtn active={routeCalibrMode} onClick={() => setRouteCalibrMode(v => !v)}
+        <ToggleBtn active={routeCalibrMode && showBypass} onClick={() => showBypass && setRouteCalibrMode(v => !v)}
           colorOn="bg-cyan-200 text-cyan-900" colorOff="bg-slate-100 text-slate-600">
           {routeCalibrMode ? 'Exit route calibration' : 'Calibrate route'}
         </ToggleBtn>
       </div>
 
       {/* Route calibration panel */}
-      {routeCalibrMode && (
+      {routeCalibrMode && showBypass && (
         <div className="bg-cyan-950 border border-cyan-500/30 rounded-lg px-4 py-3">
           <div className="flex items-center justify-between gap-3 mb-2">
             <p className="text-xs font-bold text-cyan-200 uppercase tracking-wider">
@@ -785,6 +1132,7 @@ export default function BypassVisualization() {
 
       {/* 3D aerial map */}
       <BypassMap3D
+        showBypass={showBypass}
         showOption1={showOption1}
         showOption2={showOption2}
         routeCalibrMode={routeCalibrMode}
@@ -816,8 +1164,9 @@ export default function BypassVisualization() {
 
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
         <strong>Note:</strong> Overhead bypass is a concept illustration only — not part of the Mosman Masterplan
-        or any current Council proposal. Building heights on the aerial map are scaled from current OSM footprints
-        to approximate Option 1 / Option 2 density scenarios.
+        or any current Council proposal. Future building footprints are current OSM buildings clipped into
+        approximate masterplan areas from the booklet maps and the Mosman LGA edge, then assigned the matching
+        Option 1 / Option 2 storey bands.
       </div>
     </div>
   )

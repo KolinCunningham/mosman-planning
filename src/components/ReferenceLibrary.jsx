@@ -26,7 +26,7 @@ export default function ReferenceLibrary() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-white">Reference Library</h2>
+          <h2 className="text-xl font-bold text-slate-900">Reference Library</h2>
           <p className="text-slate-500 text-sm">{REFERENCE_DOCS.length} documents — Standard Drawings, DCPs, Policies, Plans of Management</p>
         </div>
       </div>
@@ -39,7 +39,7 @@ export default function ReferenceLibrary() {
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search documents…"
-            className="w-full bg-mosman-dark border border-mosman-line rounded-lg pl-9 pr-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-mosman-teal"
+            className="w-full bg-white border border-mosman-line rounded-lg pl-9 pr-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-mosman-teal"
           />
         </div>
       </div>
@@ -48,7 +48,7 @@ export default function ReferenceLibrary() {
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setActiveCategory('ALL')}
-          className={`px-3 py-1 rounded text-xs font-medium transition-colors ${activeCategory === 'ALL' ? 'bg-slate-500 text-white' : 'bg-mosman-dark border border-mosman-line text-slate-500 hover:text-white'}`}>
+          className={`px-3 py-1 rounded text-xs font-medium transition-colors ${activeCategory === 'ALL' ? 'bg-slate-500 text-white' : 'bg-white border border-mosman-line text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}>
           All ({REFERENCE_DOCS.length})
         </button>
         {Object.entries(DOC_CATEGORIES).map(([key, cat]) => {
@@ -56,7 +56,7 @@ export default function ReferenceLibrary() {
           return (
             <button key={key}
               onClick={() => setActiveCategory(activeCategory === key ? 'ALL' : key)}
-              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${activeCategory === key ? `${cat.color} text-white` : 'bg-mosman-dark border border-mosman-line text-slate-500 hover:text-white'}`}>
+              className={`px-3 py-1 rounded text-xs font-medium transition-colors ${activeCategory === key ? `${cat.color} text-white` : 'bg-white border border-mosman-line text-slate-500 hover:bg-slate-100 hover:text-slate-800'}`}>
               {cat.label} ({count})
             </button>
           )

@@ -3,6 +3,7 @@ import { Sparkles, Save, RefreshCw, Key, CheckCircle, AlertTriangle, Clock, Chev
 import { useStorage } from '../hooks/useStorage'
 import { buildValidationPrompt } from '../utils/validatePrompt'
 import { FEASIBILITY_OPTIONS } from '../data/categories'
+import { REFERENCE_DOCS } from '../data/referenceDocs'
 
 const FEASIBILITY_COLORS = {
   'Feasible Now': 'bg-green-900 text-green-300 border-green-700',
@@ -22,6 +23,7 @@ export default function AIValidation({ suggestion, onSave }) {
   const [copied, setCopied] = useState(false)
 
   const prompt = buildValidationPrompt(suggestion || {})
+  const referenceDocCount = REFERENCE_DOCS.length
 
   async function runValidation() {
     if (!apiKey) { setError('Enter Anthropic API key first'); return }
@@ -88,7 +90,7 @@ export default function AIValidation({ suggestion, onSave }) {
   return (
     <div className="space-y-4">
       <div className="p-3 bg-mosman-dark rounded-lg border border-mosman-line text-xs text-slate-500">
-        Validates this suggestion against all 53 reference documents — Standard Drawings, DCPs, Policies, Plans of Management, LEP Amendments, Strategies. Identifies what's feasible now, what needs changing, and the give-take for each required change.
+        Validates this suggestion against the {referenceDocCount} reference documents loaded in this app — Standard Drawings, DCPs, Policies, Plans of Management, LEP Amendments, and Strategies. It identifies what is feasible now, what needs changing, and the give-take for each required change.
       </div>
 
       {/* API Key */}
@@ -125,7 +127,7 @@ export default function AIValidation({ suggestion, onSave }) {
           className="flex-1 flex items-center justify-center gap-2 bg-mosman-pink hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-4 py-3 rounded-xl transition-colors"
         >
           {loading
-            ? <><RefreshCw size={16} className="animate-spin" /> Validating against 53 documents…</>
+            ? <><RefreshCw size={16} className="animate-spin" /> Validating against {referenceDocCount} documents…</>
             : <><Sparkles size={16} /> Run AI Validation</>
           }
         </button>

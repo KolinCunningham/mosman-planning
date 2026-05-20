@@ -363,9 +363,9 @@ function addPlanningLayers(map) {
     source: 'grid-stress-areas',
     paint: {
       'line-color': ['get', 'halo'],
-      'line-width': ['interpolate', ['linear'], ['zoom'], 13, 18, 16, 34],
-      'line-opacity': 0.38,
-      'line-blur': 4,
+      'line-width': ['interpolate', ['linear'], ['zoom'], 13, 10, 16, 18],
+      'line-opacity': 0.34,
+      'line-blur': 3,
     },
   })
 
@@ -520,7 +520,7 @@ function addPlanningLayers(map) {
     source: 'power-demand',
     layout: {
       'text-field': ['concat', ['get', 'label'], '\n', ['to-string', ['get', 'mw']], ' MW'],
-      'text-size': 11,
+      'text-size': 10,
       'text-offset': [0, 1.7],
       'text-anchor': 'top',
     },
@@ -553,8 +553,8 @@ function addPlanningLayers(map) {
     type: 'symbol',
     source: 'grid-stress-areas',
     layout: {
-      'text-field': ['concat', ['get', 'networkType'], '\n', ['get', 'score'], '/100'],
-      'text-size': 11,
+      'text-field': ['concat', ['get', 'riskBand'], '\n', ['get', 'networkType'], '\n', ['get', 'score'], '/100'],
+      'text-size': 10,
       'text-anchor': 'center',
       'text-padding': 4,
     },
@@ -690,14 +690,50 @@ function gridStressAreaCollection(showGridStress, scope, options) {
   return featureCollection(
     GRID_STRESS_AREAS.map(area => {
       const stressScore = getProjectedGridStressScore(area.score, scope, options)
+      const stressLine = GRID_STRESS_LINES.find(line => line.areaId === area.id)
+      const corridor = lineCorridorPolygon(
+        stressLine?.coords?.length ? stressLine.coords : area.coords,
+        area.corridorHalfWidthM || (area.networkType?.includes('11 kV') ? 95 : 75)
+      )
 
       return {
         type: 'Feature',
         properties: stressProperties(area, stressScore),
-        geometry: { type: 'Polygon', coordinates: [area.coords] },
+        geometry: { type: 'Polygon', coordinates: [corridor] },
       }
     })
   )
+}
+
+function lineCorridorPolygon(coords, halfWidthM = 75) {
+  if (!Array.isArray(coords) || coords.length < 2) return coords || []
+
+  const avgLat = coords.reduce((sum, coord) => sum + coord[1], 0) / coords.length
+  const latM = 111000
+  const lngM = 111320 * Math.cos((avgLat * Math.PI) / 180)
+  const left = []
+  const right = []
+
+  coords.forEach((coord, index) => {
+    const prev = coords[index - 1] || coord
+    const next = coords[index + 1] || coord
+    const dx = (next[0] - prev[0]) * lngM
+    const dy = (next[1] - prev[1]) * latM
+    const len = Math.sqrt(dx * dx + dy * dy) || 1
+    const perpX = (-dy / len) * halfWidthM / lngM
+    const perpY = (dx / len) * halfWidthM / latM
+
+    left.push([
+      Number((coord[0] + perpX).toFixed(6)),
+      Number((coord[1] + perpY).toFixed(6)),
+    ])
+    right.push([
+      Number((coord[0] - perpX).toFixed(6)),
+      Number((coord[1] - perpY).toFixed(6)),
+    ])
+  })
+
+  return [...left, ...right.reverse(), left[0]]
 }
 
 function gridStressLineCollection(showGridStress, scope, options) {
@@ -730,6 +766,7 @@ function stressProperties(area, stressScore) {
     label: area?.label || 'Network stress area',
     networkType: area?.networkType || 'LV/HV',
     severity: area?.severity || 'Future network stress',
+    riskBand: stressRiskBand(stressScore),
     baseScore: area?.score || stressScore,
     score: stressScore,
     color: area?.color || '#fb7185',
@@ -748,6 +785,7 @@ function normaliseStressFeature(properties = {}) {
     label: properties.label,
     networkType: properties.networkType,
     severity: properties.severity,
+    riskBand: properties.riskBand || stressRiskBand(Number(properties.score || 0)),
     baseScore: Number(properties.baseScore || properties.score || 0),
     score: Number(properties.score || 0),
     color: properties.color,
@@ -767,12 +805,19 @@ function stressPopupHtml(area) {
     <div class="holo-popup-card">
       <p class="holo-popup-kicker">${escapeHtml(area.networkType)} inadequacy</p>
       <h3>${escapeHtml(area.label)}</h3>
-      <p class="holo-popup-score">${escapeHtml(area.severity)} · ${area.score}/100</p>
+      <p class="holo-popup-score">${escapeHtml(area.riskBand)} · ${escapeHtml(area.severity)} · ${area.score}/100</p>
       <p>${escapeHtml(area.futureStress)}</p>
       <ul>${missing}</ul>
       <p class="holo-popup-upgrade">${escapeHtml(area.requiredUpgrade)}</p>
     </div>
   `
+}
+
+function stressRiskBand(score) {
+  if (score >= 90) return 'Critical'
+  if (score >= 80) return 'High'
+  if (score >= 70) return 'Constrained'
+  return 'Monitor'
 }
 
 function escapeHtml(value) {

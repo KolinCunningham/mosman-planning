@@ -17,7 +17,7 @@ export default function PowerlineData() {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Powerline Data</h2>
+          <h2 className="text-xl font-bold text-slate-900">Powerline Data And Engineering Basis</h2>
           <p className="text-slate-500 text-sm">
             {POWERLINE_PULL.area} · extracted {formatDate(POWERLINE_PULL.extractedAt)} · {POWERLINE_PULL.networkProvider}
           </p>
@@ -36,13 +36,16 @@ export default function PowerlineData() {
       <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
         <div className="flex gap-3">
           <AlertTriangle size={18} className="mt-0.5 flex-shrink-0" />
-          <p>{POWERLINE_PULL.sourceNote}</p>
+          <p>
+            {POWERLINE_PULL.sourceNote} Treat these counts as a public asset audit, not a confirmed load-flow
+            or spare-capacity assessment.
+          </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Metric icon={Zap} label="HV Overhead" value="36" sub="published spans inside Mosman LGA" color="text-blue-600" />
-        <Metric icon={Zap} label="LV + Services" value={totalLv.toLocaleString()} sub="published overhead LV/service/streetlight spans" color="text-mosman-pink" />
+        <Metric icon={Zap} label="HV overhead spans" value="36" sub="published public-layer spans inside Mosman LGA" color="text-blue-600" />
+        <Metric icon={Zap} label="LV, services, streetlights" value={totalLv.toLocaleString()} sub="published overhead LV/service/streetlight spans" color="text-mosman-pink" />
         <Metric icon={ShieldAlert} label="Poles" value="3,367" sub="Ausgrid pole assets in public layer" color="text-mosman-teal" />
       </div>
 
@@ -59,6 +62,10 @@ export default function PowerlineData() {
       </Section>
 
       <Section title="Voltage Allowances" icon={ShieldAlert}>
+        <p className="mb-3 text-xs leading-relaxed text-slate-500">
+          Voltage ranges explain what a compliant supply should stay within. They do not prove a street has
+          spare capacity for EV charging, solar export, V2G, or new apartments.
+        </p>
         <DataTable
           columns={['Band', 'Nominal', 'Allowed / Operating Range', 'Source']}
           rows={VOLTAGE_LIMITS.map(item => [item.band, item.nominal, item.allowed, item.source])}
@@ -66,9 +73,23 @@ export default function PowerlineData() {
       </Section>
 
       <Section title="Service And Line Sizing" icon={Ruler}>
+        <p className="mb-3 text-xs leading-relaxed text-slate-500">
+          Service ratings are rulebook sizing references. Final line upgrades still depend on route length,
+          voltage drop, fault level, transformer loading, thermal rating, earthing, and Ausgrid approval.
+        </p>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <SizingTable title="Underground Service Cables" rows={SERVICE_SIZING.underground} />
           <SizingTable title="Overhead Service Cables" rows={SERVICE_SIZING.overhead} />
+        </div>
+        <div className="mt-4 rounded-lg border border-mosman-line bg-white p-4">
+          <p className="text-sm font-semibold text-slate-900">Overhead Service Span Notes</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {SERVICE_SIZING.serviceSpanNotes.map(item => (
+              <span key={item} className="rounded border border-mosman-line bg-slate-50 px-2 py-1 text-xs text-slate-600">
+                {item}
+              </span>
+            ))}
+          </div>
         </div>
         <div className="mt-4 rounded-lg border border-mosman-line bg-slate-50 p-4">
           <p className="text-sm font-semibold text-slate-900">Ausgrid LV Overhead Mains Conductors</p>
@@ -96,7 +117,7 @@ export default function PowerlineData() {
         <div className="divide-y divide-mosman-line">
           {POWERLINE_SOURCES.map(source => (
             <a
-              key={source.url}
+              key={`${source.label}-${source.url}`}
               href={source.url}
               target="_blank"
               rel="noreferrer"

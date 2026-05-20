@@ -59,7 +59,7 @@ export default function MapChangeForm() {
     <div className="max-w-3xl mx-auto space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-white">Propose Map Change</h2>
+          <h2 className="text-xl font-bold text-slate-900">Propose Map Change</h2>
           <p className="text-slate-500 text-sm">Suggest modifications to LEP maps — triggers full audit</p>
         </div>
         <button onClick={handleSave}
@@ -98,7 +98,7 @@ export default function MapChangeForm() {
               className={`px-3 py-1.5 rounded font-mono text-sm font-bold transition-colors ${
                 form.mapsAffected.includes(code)
                   ? 'bg-mosman-pink text-white'
-                  : 'bg-mosman-dark border border-mosman-line text-slate-500 hover:text-white'
+                  : 'bg-white border border-mosman-line text-slate-500 hover:bg-slate-100 hover:text-slate-800'
               }`}>
               {code}
               <span className="font-normal text-xs ml-1 opacity-70">{MAP_TYPES[code].name.split(' ').slice(0,2).join(' ')}</span>
@@ -169,7 +169,7 @@ export default function MapChangeForm() {
               <input type="checkbox" className="accent-mosman-teal"
                 checked={form.consistency[layer] || false}
                 onChange={e => setNested('consistency', layer, e.target.checked)} />
-              <span className={`text-sm ${form.consistency[layer] ? 'text-green-300 line-through opacity-60' : 'text-slate-700'}`}>
+              <span className={`text-sm ${form.consistency[layer] ? 'text-green-700 line-through opacity-70' : 'text-slate-700'}`}>
                 {layer}
               </span>
             </label>
@@ -185,7 +185,7 @@ export default function MapChangeForm() {
               <input type="checkbox" className="mt-0.5 accent-mosman-teal flex-shrink-0"
                 checked={form.auditChecks[item] || false}
                 onChange={e => setNested('auditChecks', item, e.target.checked)} />
-              <span className={`text-sm ${form.auditChecks[item] ? 'text-green-300 line-through opacity-60' : 'text-slate-700'}`}>
+              <span className={`text-sm ${form.auditChecks[item] ? 'text-green-700 line-through opacity-70' : 'text-slate-700'}`}>
                 {item}
               </span>
             </label>

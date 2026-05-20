@@ -71,7 +71,7 @@ export default function SuggestionForm() {
     { label: 'Basics', fields: basics(form, set) },
     { label: 'Give-Take', fields: giveTake(form, set) },
     { label: 'Constraints', fields: constraints(form, set) },
-    { label: 'Regulatory', fields: regulatory(form, setNested) },
+    { label: 'Regulatory', fields: regulatory(form, set, setNested) },
     { label: 'Principles', fields: principles(form, setNested) },
     { label: 'Horizons', fields: horizons(form, set) },
     { label: 'Audit', fields: audit(form, setNested, auditScore, auditTotal) },
@@ -82,7 +82,7 @@ export default function SuggestionForm() {
     <div className="max-w-3xl mx-auto space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-white">{existing ? 'Edit' : 'New'} Suggestion</h2>
+          <h2 className="text-xl font-bold text-slate-900">{existing ? 'Edit' : 'New'} Suggestion</h2>
           <p className="text-slate-500 text-sm">Complete all sections — audit runs automatically</p>
         </div>
         <div className="flex items-center gap-2">
@@ -111,7 +111,7 @@ export default function SuggestionForm() {
         {sections.map((s, i) => (
           <button key={i} onClick={() => setSection(i)}
             className={`px-3 py-1 rounded text-sm transition-colors ${
-              i === section ? 'bg-mosman-pink text-white' : 'bg-slate-100 text-slate-500 hover:text-white'
+              i === section ? 'bg-mosman-pink text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800'
             }`}>
             {s.label}
           </button>
@@ -220,7 +220,7 @@ function constraints(form, set) {
   </>
 }
 
-function regulatory(form, setNested) {
+function regulatory(form, set, setNested) {
   return <>
     <div className="p-3 bg-mosman-dark rounded-lg border border-mosman-line text-xs text-slate-500 mb-2">
       Complete all 5 rows. N/A is a valid answer.
@@ -236,7 +236,7 @@ function regulatory(form, setNested) {
     ))}
     <Field label="State Government Ask"
       note="If State cooperation needed, frame as specific request. Otherwise write N/A.">
-      <textarea className={ta} rows={3} value={form.stateAsk} onChange={e => setNested('regulatory', 'stateAsk', e.target.value)}
+      <textarea className={ta} rows={3} value={form.stateAsk} onChange={e => set('stateAsk', e.target.value)}
         placeholder="We ask that [specific policy/SEPP/clause] be amended to allow [outcome] in [context]." />
     </Field>
   </>
@@ -301,7 +301,7 @@ function audit(form, setNested, score, total) {
             checked={form.auditChecks[item] || false}
             onChange={e => setNested('auditChecks', item, e.target.checked)}
           />
-          <span className={`text-sm ${form.auditChecks[item] ? 'text-green-300 line-through opacity-60' : 'text-slate-700'} group-hover:text-white transition-colors`}>
+          <span className={`text-sm ${form.auditChecks[item] ? 'text-green-700 line-through opacity-70' : 'text-slate-700'} group-hover:text-slate-900 transition-colors`}>
             {item}
           </span>
         </label>

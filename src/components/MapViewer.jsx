@@ -487,13 +487,14 @@ function NetworkStressStrip({ selectedArea, selectedScope, futureOptions, showGr
             <div key={area.id} className="holo-list-item px-3 py-2">
               <div className="flex items-center justify-between gap-2">
                 <p className="truncate text-xs font-semibold text-slate-900">{area.label}</p>
-                <span className="text-xs font-bold text-rose-600">{getNetworkRiskScore(area, selectedScope, futureOptions)}/100</span>
+                <RiskScoreBadge score={getNetworkRiskScore(area, selectedScope, futureOptions)} compact />
               </div>
               <p className="mt-1 text-[11px] leading-snug text-slate-500">{area.networkType} · {area.severity}</p>
             </div>
           ))}
         </div>
       </div>
+      <NetworkRatingGuide />
     </section>
   )
 }
@@ -510,6 +511,7 @@ function SelectedNetworkArea({ area, selectedScope, futureOptions }) {
 
   const baseScore = getNetworkBaseScore(area)
   const score = getNetworkRiskScore(area, selectedScope, futureOptions)
+  const band = getRiskBand(score)
   const shift = score - baseScore
 
   return (
@@ -519,10 +521,10 @@ function SelectedNetworkArea({ area, selectedScope, futureOptions }) {
           <p className="text-sm font-semibold text-slate-900">{area.label}</p>
           <p className="text-xs text-slate-500">{area.networkType} · {area.severity}</p>
         </div>
-        <span className="rounded bg-rose-100 px-2 py-0.5 text-xs font-bold text-rose-700">{score}/100</span>
+        <RiskScoreBadge score={score} />
       </div>
       <p className="mt-2 text-[11px] leading-snug text-slate-500">
-        Scenario inadequacy risk score. Base {baseScore}/100{shift === 0 ? '' : `, adjusted ${shift > 0 ? '+' : ''}${shift}`} for the current growth, charging, V2G, and solar settings.
+        {band.label} means {band.meaning}. Higher is worse. Base {baseScore}/100{shift === 0 ? '' : `, adjusted ${shift > 0 ? '+' : ''}${shift}`} for the current growth, charging, V2G, and solar settings.
       </p>
       <p className="mt-2 text-xs text-slate-600">{area.futureStress}</p>
       <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-3">
@@ -538,18 +540,68 @@ function NetworkRatingGuide() {
   return (
     <div className="network-rating-guide">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Rating system</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Rating system - higher is worse</p>
         <p className="mt-1 text-[11px] leading-snug text-slate-500">
-          This is a planning risk score, not an official Ausgrid capacity or voltage reading. Higher means the future EV, V2G, solar, density, parking, and physical constraints make the line more likely to need upgrade.
+          This is a planning risk score, not an official Ausgrid capacity or voltage reading. It shows how likely an area is to need powerline, feeder, transformer, parking, or charging upgrades under the future scenario.
         </p>
       </div>
       <div className="network-rating-scale">
-        <span>90-100 critical</span>
-        <span>80-89 high</span>
-        <span>70-79 constrained</span>
-        <span>&lt;70 monitor</span>
+        {RISK_BANDS.map(band => (
+          <span key={band.label} className={`network-rating-scale-${band.tone}`}>
+            <strong>{band.range}</strong>
+            {band.label}: {band.short}
+          </span>
+        ))}
       </div>
     </div>
+  )
+}
+
+const RISK_BANDS = [
+  {
+    min: 90,
+    range: '90-100',
+    label: 'Critical',
+    short: 'bad / early upgrade likely',
+    meaning: 'the area is likely inadequate without early upgrade planning',
+    tone: 'critical',
+  },
+  {
+    min: 80,
+    range: '80-89',
+    label: 'High',
+    short: 'upgrade likely',
+    meaning: 'the area is under strong future pressure and likely needs targeted upgrades',
+    tone: 'high',
+  },
+  {
+    min: 70,
+    range: '70-79',
+    label: 'Constrained',
+    short: 'mitigate and monitor',
+    meaning: 'the area can possibly work, but only with controls, monitoring, or local upgrades',
+    tone: 'constrained',
+  },
+  {
+    min: 0,
+    range: '<70',
+    label: 'Monitor',
+    short: 'watch / confirm',
+    meaning: 'the area is not the first priority, but still needs confirmation as growth arrives',
+    tone: 'monitor',
+  },
+]
+
+function getRiskBand(score) {
+  return RISK_BANDS.find(band => score >= band.min) || RISK_BANDS[RISK_BANDS.length - 1]
+}
+
+function RiskScoreBadge({ score, compact = false }) {
+  const band = getRiskBand(score)
+  return (
+    <span className={`risk-score-badge risk-score-badge-${band.tone}`}>
+      {compact ? `${band.label} ${score}` : `${band.label} ${score}/100`}
+    </span>
   )
 }
 
@@ -590,11 +642,15 @@ function FutureInfrastructureSchedule({ selectedNetworkArea, setSelectedNetworkA
       <div className="map-interface-head flex flex-wrap items-center justify-between gap-3 px-4 py-3">
         <div>
           <p className="text-sm font-semibold text-slate-900">Future LV/HV Lines And Parking Constraints</p>
-          <p className="text-xs text-slate-500">Inadequate line reasons and parking/charging requirements behind the 20-30 year future overlay. Scores are scenario risk out of 100.</p>
+          <p className="text-xs text-slate-500">Inadequate line reasons and parking/charging requirements behind the 20-30 year future overlay. Scores are planning risk out of 100, not measured spare capacity.</p>
         </div>
         <span className="rounded bg-white/80 px-2.5 py-1 text-xs font-semibold text-slate-500">
           {GRID_STRESS_AREAS.length} network areas · {FUTURE_PARKING_AREAS.length} parking areas
         </span>
+      </div>
+
+      <div className="px-4 pt-4">
+        <NetworkRatingGuide />
       </div>
 
       <div className="grid grid-cols-1 gap-4 p-4 xl:grid-cols-3">
@@ -633,6 +689,11 @@ function InfrastructureColumn({ title, tone, items, selectedId, onSelect, select
       </div>
       <div className="mt-3 space-y-2">
         {items.map(area => (
+          (() => {
+            const score = getNetworkRiskScore(area, selectedScope, futureOptions)
+            const band = getRiskBand(score)
+
+            return (
           <button
             type="button"
             key={area.id}
@@ -642,9 +703,12 @@ function InfrastructureColumn({ title, tone, items, selectedId, onSelect, select
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-slate-900">{area.label}</p>
-                <p className="text-xs text-slate-500">{area.severity} · risk {getNetworkRiskScore(area, selectedScope, futureOptions)}/100</p>
+                <p className="text-xs text-slate-500">{area.severity} · {band.label.toLowerCase()} risk</p>
               </div>
-              <span className={`rounded px-2 py-0.5 text-[11px] font-bold ${toneClass}`}>{area.networkType}</span>
+              <div className="flex flex-col items-end gap-1">
+                <span className={`rounded px-2 py-0.5 text-[11px] font-bold ${toneClass}`}>{area.networkType}</span>
+                <RiskScoreBadge score={score} compact />
+              </div>
             </div>
 
             <p className="mt-2 text-xs leading-snug text-slate-600">{area.futureStress}</p>
@@ -655,6 +719,8 @@ function InfrastructureColumn({ title, tone, items, selectedId, onSelect, select
             </div>
             <p className="mt-2 border-t border-white/80 pt-2 text-[11px] leading-snug text-slate-500">{area.requiredUpgrade}</p>
           </button>
+            )
+          })()
         ))}
       </div>
     </div>
@@ -711,7 +777,7 @@ function NowFutureIssueSummary({
     id: area.id,
     title: area.label,
     group: 'Power lines',
-    tag: `${area.networkType} · ${getNetworkRiskScore(area, selectedScope, futureOptions)}/100`,
+    tag: formatRiskTag(area, selectedScope, futureOptions, area.networkType),
     now: area.existingLine,
     future: area.futureStress,
     councilPower: getNetworkCouncilPowerIssue(area),
@@ -859,7 +925,7 @@ function StatePowerLawComparison({
       <div className="map-interface-head flex flex-wrap items-center justify-between gap-3 px-4 py-3">
         <div>
           <p className="text-sm font-semibold text-slate-900">State Plan Vs Law Capacity Vs Powerlines</p>
-          <p className="text-xs text-slate-500">Working comparison of state housing direction, current LEP/legal capacity, powerline readiness, and overlooked delivery actions.</p>
+          <p className="text-xs text-slate-500">Working comparison of state housing direction, current LEP capacity, powerline readiness, and overlooked delivery actions.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {STATE_PLANNING_SOURCE_LINKS.map(source => (
@@ -928,7 +994,7 @@ function ComparisonDetail({ item }) {
 
       <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
         <ComparisonBlock title="State Government Plan" body={item.statePlan} tone="state" />
-        <ComparisonBlock title="Law / LEP Capacity" body={item.lawCapacity} tone="law" />
+        <ComparisonBlock title="Planning / LEP Capacity" body={item.lawCapacity} tone="law" />
         <ComparisonBlock title="Powerline Readiness" body={item.powerlineCapacity} tone="power" />
         <ComparisonBlock title="Overlooked To Meet Goals" body={item.overlooked} tone="action" />
       </div>
@@ -979,10 +1045,10 @@ function buildStatePowerLawComparisons({
     title: area.label,
     group: 'Power line issue',
     place: area.networkType,
-    type: `${getNetworkRiskScore(area, selectedScope, futureOptions)}/100`,
+    type: formatRiskTag(area, selectedScope, futureOptions),
     statePlan: getStateDirectionForNetwork(area),
     lawCapacity: getLawCapacityForNetwork(area),
-    powerlineCapacity: `${area.existingLine} Current scenario risk is ${getNetworkRiskScore(area, selectedScope, futureOptions)}/100 because ${area.futureStress.toLowerCase()}`,
+    powerlineCapacity: `${area.existingLine} Current scenario risk is ${formatRiskTag(area, selectedScope, futureOptions)} because ${area.futureStress.toLowerCase()}`,
     overlooked: `${area.requiredUpgrade} Also overlooked: ${(area.missing || []).join('; ')}.`,
     selected: selectedNetworkArea?.id === area.id,
     onSelect: () => {
@@ -994,7 +1060,7 @@ function buildStatePowerLawComparisons({
   const parkingItems = FUTURE_PARKING_AREAS.map(area => {
     const linkedStressArea = getStressAreaForParking(area)
     const riskText = linkedStressArea
-      ? `${linkedStressArea.label} is the linked network proxy at ${getNetworkRiskScore(linkedStressArea, selectedScope, futureOptions)}/100. ${linkedStressArea.futureStress}`
+      ? `${linkedStressArea.label} is the linked network proxy at ${formatRiskTag(linkedStressArea, selectedScope, futureOptions)}. ${linkedStressArea.futureStress}`
       : 'No single linked feeder has been assigned yet; a parking-to-feeder study is still needed.'
 
     return {
@@ -1024,7 +1090,7 @@ function buildStatePowerLawComparisons({
     place: gap.category,
     type: gap.relatedLayers.join(' + '),
     statePlan: getStateDirectionForPlanGap(gap),
-    lawCapacity: `Current legal capacity is mainly expressed through ${gap.relatedLayers.join(', ')} controls. ${gap.currentPlanGap}`,
+    lawCapacity: `Current planning capacity is mainly expressed through ${gap.relatedLayers.join(', ')} controls. ${gap.currentPlanGap}`,
     powerlineCapacity: getPowerlineReadinessForPlanGap(gap, selectedScope, futureOptions),
     overlooked: `${gap.requiredAction} Also overlooked: ${gap.missing.join('; ')}.`,
     selected: selectedPlanGap?.id === gap.id,
@@ -1103,7 +1169,14 @@ function getPowerlineReadinessForPlanGap(gap, selectedScope, futureOptions) {
     return 'No single LV/HV area dominates this issue; a feeder-by-feeder load study is needed before the planning capacity can be treated as deliverable.'
   }
 
-  return `${linkedArea.label} is the closest mapped power constraint at ${getNetworkRiskScore(linkedArea, selectedScope, futureOptions)}/100. ${linkedArea.futureStress}`
+  return `${linkedArea.label} is the closest mapped power constraint at ${formatRiskTag(linkedArea, selectedScope, futureOptions)}. ${linkedArea.futureStress}`
+}
+
+function formatRiskTag(area, selectedScope, futureOptions, prefix = '') {
+  const score = getNetworkRiskScore(area, selectedScope, futureOptions)
+  const band = getRiskBand(score)
+  const label = `${band.label} ${score}/100`
+  return prefix ? `${prefix} · ${label}` : label
 }
 
 function getStressAreaForPlanGap(gap) {
@@ -1490,7 +1563,7 @@ function FutureGridPanel({
                       <span className="block text-xs font-semibold text-slate-900">{area.label}</span>
                       <span className="block text-[11px] text-slate-500">{area.networkType}</span>
                     </span>
-                    <span className="text-xs font-bold text-rose-600">{score}/100</span>
+                    <RiskScoreBadge score={score} compact />
                   </button>
                 )
               })}

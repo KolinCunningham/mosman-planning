@@ -12,15 +12,15 @@ const MISSING = [
     title: 'Transport & traffic infrastructure',
     tag: 'Missing principle',
     tagColor: 'bg-red-100 text-red-700',
-    problem: 'Military Road is already at capacity. The masterplan commits to housing targets but leaves congestion mitigation optional. Buses are not a solution — they share the same road and bridge. Northern Beaches growth (Frenchs Forest hospital precinct alone adds tens of thousands) will increase through-traffic independent of any local action.',
+    problem: 'Military Road already carries heavy peak traffic. The masterplan commits to housing targets, but the transport response still needs clearer delivery triggers. Better buses help local access, but they do not remove through-traffic because they share the same corridor and bridge approaches. Regional growth to the north will add pressure independent of local Mosman decisions.',
     solutions: [
       {
-        label: 'Overhead bypass / second harbour crossing',
-        detail: 'Dedicated bypass takes Northern Beaches through-traffic over or around the Mosman village centre. State Government responsibility — but the density uplift provides the political justification. Council should formally advocate for this as part of the masterplan.',
+        label: 'Bypass / second harbour crossing investigation',
+        detail: 'A state-led bypass or grade-separated movement study should test whether Northern Beaches through-traffic can be taken around Mosman village centre. This is outside Council delivery power, but the density uplift gives Council a stronger reason to formally advocate for the investigation.',
       },
       {
         label: 'Tidal (reversible) one-way system',
-        detail: 'Ourimbah Rd → Macpherson St → Gerard St → Belgrave St → Ernest St forms a parallel route. Direction-switched: inbound AM peak, outbound PM. Proven technique (Sydney Harbour Bridge uses tidal lane allocation). Requires signage and signal coordination — no new road infrastructure.',
+        detail: 'Ourimbah Rd → Macpherson St → Gerard St → Belgrave St → Ernest St forms a possible parallel route. Direction-switched operation could be tested for inbound AM and outbound PM peaks, but it needs traffic modelling, access, safety, bus, and resident-impact review before it is treated as workable.',
       },
     ],
     principle: 'Transport infrastructure — road capacity, active travel, pedestrian connections — must be planned and funded ahead of or concurrent with new development. Council must formally advocate to the State for bypass infrastructure serving the Northern Beaches corridor.',
@@ -29,18 +29,18 @@ const MISSING = [
     title: 'Energy & utility infrastructure',
     tag: 'Missing principle',
     tagColor: 'bg-orange-100 text-orange-700',
-    problem: 'Mosman\'s overhead electricity network was designed for low-density residential load. 4,700 new dwellings with EVs, reverse-cycle AC, and induction cooktops represent a step-change in demand. No principle requires Ausgrid network capacity to be confirmed or upgraded as a prerequisite for development approval.',
+    problem: 'Mosman\'s street-level electricity network was largely planned around lower-density residential demand. Around 4,700 additional dwellings, plus EVs, reverse-cycle air conditioning, induction cooking, solar export, and V2G, create a step-change in two-way electrical demand. The draft principles should more clearly require network capacity to be checked and upgrade pathways to be identified before major uplift is approved.',
     solutions: [
       {
         label: 'Utility capacity as a prerequisite',
-        detail: 'No development approval in the Option 2 zone should be granted without Ausgrid confirming network capacity or committing to upgrade. Electricity, water, stormwater, and telco infrastructure must be upgraded to meet new demand.',
+        detail: 'Major uplift approvals in the Option 2 zone should include Ausgrid capacity confirmation or a documented upgrade pathway. Electricity, water, stormwater, and telco infrastructure must be planned with the new demand, not treated as after-the-fact connections.',
       },
       {
-        label: 'Overhead undergrounding in renewal areas',
-        detail: 'Required as a condition of major approvals in the renewal corridor. Improves streetscape character, reduces bushfire risk, removes visual amenity problem that worsens as building heights increase.',
+        label: 'Targeted undergrounding or visual mitigation',
+        detail: 'Where feasible, major approvals in renewal corridors should underground or otherwise reduce the visual and clearance impacts of overhead assets. This improves streetscape character and reduces conflicts with taller buildings, trees, balconies, and public-domain works.',
       },
     ],
-    principle: 'Utility infrastructure capacity must be confirmed and upgraded before density approvals are granted. Overhead network undergrounding should be prioritised in renewal areas.',
+    principle: 'Utility infrastructure capacity must be confirmed, staged, or funded before major density approvals are granted. Undergrounding or visual mitigation should be prioritised where renewal makes it feasible.',
   },
 ]
 
@@ -73,10 +73,10 @@ const OPTION2 = [
     title: 'Conditions for Option 2 to succeed',
     points: [
       '28-storey buildings should not be permitted by right. Maximum height must be conditional on demonstrated public benefit — open space, through-site pedestrian links, affordable housing in perpetuity, or ground-floor retail activation.',
-      'Council must formally advocate to the State for bypass infrastructure. More buses are not sufficient.',
+      'Council must formally advocate to the State for transport modelling and bypass/grade-separated movement options. More buses alone are not sufficient.',
       'A tidal one-way system on the Ourimbah Rd corridor should be investigated immediately.',
-      'No development approval in the Option 2 zone without Ausgrid confirming capacity or committing to upgrade.',
-      'Overhead undergrounding required as a condition of major approvals in the renewal corridor.',
+      'Major uplift in the Option 2 zone should require Ausgrid capacity confirmation or a clear upgrade pathway.',
+      'Undergrounding or visual mitigation should be required where major approvals make it feasible.',
     ],
   },
 ]
@@ -84,9 +84,9 @@ const OPTION2 = [
 const TAX = {
   title: 'Federal tax reform creates a closing window',
   points: [
-    'From 1 July 2027, negative gearing restricted to new builds only — existing properties purchased after 12 May 2026 can no longer be negatively geared against salary income.',
-    'New apartments built in Mosman\'s Option 2 corridor will attract significantly better tax treatment than buying established housing anywhere in Sydney.',
-    'Gains accrued before 1 July 2027 still attract the 50% CGT discount. The window to sell into a rezoning uplift at the most favourable tax rate is limited.',
+    'From 1 July 2027, announced federal settings limit negative gearing for established residential properties while keeping it available for eligible new builds that genuinely add supply.',
+    'New apartments in Mosman\'s Option 2 corridor may receive more favourable investor tax treatment than established housing, if they meet the new-build rules.',
+    'Announced CGT transition rules treat gains accrued before 1 July 2027 differently from gains after that date. Timing matters, but individual tax outcomes need professional advice.',
     'Getting Option 2 gazetted and planning agreements in place before that window closes is a material financial consideration for the community.',
     'Done correctly — with infrastructure locked in, height tied to public benefit, and affordable housing secured through binding planning agreements — this masterplan positions Mosman to capture genuine long-term value while the federal settings are aligned to deliver it.',
   ],
