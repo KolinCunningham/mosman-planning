@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Play, Map, Lightbulb, AlertTriangle, CheckCircle, Clock, FileEdit, BookOpen, Zap } from 'lucide-react'
+import { Play, Map, Lightbulb, AlertTriangle, CheckCircle, Clock, FileEdit, BookOpen, Zap, Building2 } from 'lucide-react'
 import { useStorage } from '../hooks/useStorage'
 import { MAPS } from '../data/maps'
 import { REFERENCE_DOCS } from '../data/referenceDocs'
@@ -57,6 +57,63 @@ export default function Dashboard() {
           </button>
         </div>
       )}
+
+      {/* Civic Briefing */}
+      <section className="bg-white border border-mosman-line rounded-xl p-6 shadow-sm">
+        <p className="text-xs font-bold uppercase tracking-wider text-mosman-pink mb-2">Briefing note</p>
+        <h3 className="text-xl font-bold text-slate-900 mb-3">
+          Why this Mosman Masterplan system was put together
+        </h3>
+        <div className="space-y-3 text-sm leading-relaxed text-slate-600">
+          <p>
+            Councillor, this system has been built to make the Mosman Masterplan easier to test in public. It brings the
+            planning maps, reference documents, proposed housing options, powerline constraints, transport issues,
+            parking pressure, heritage controls, foreshore limits, and community suggestions into one practical workspace.
+          </p>
+          <p>
+            The reason this matters is simple: the masterplan is not only a housing discussion. It is a long-term
+            infrastructure decision. If Mosman accepts more height, more dwellings, more EV charging, more visitors, and
+            more pressure on Military Road, then residents deserve to see what must be upgraded, funded, protected, or
+            negotiated with the State before those changes become irreversible.
+          </p>
+          <p>
+            Used properly, this gives decision-makers a defensible evidence trail. It helps support growth where the
+            public benefit and infrastructure capacity are real, challenge assumptions where they are weak, and ask for
+            firm delivery commitments before the community is asked to carry the cost of future planning decisions.
+          </p>
+        </div>
+      </section>
+
+      {/* Workspace Summary */}
+      <section>
+        <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wider mb-3">How to read this workspace</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <SummaryCard
+            icon={Map}
+            title="LEP Maps"
+            desc="The map workspace puts Mosman's current LEP sheets beside masterplan, heritage, foreshore, scenic, parking, power, and future-pressure overlays. For a decision-maker, it shows which streets are actually affected rather than reducing the masterplan to a broad headline map."
+            onClick={() => navigate('/maps')}
+          />
+          <SummaryCard
+            icon={Building2}
+            title="Bypass Viz"
+            desc="The bypass page is a concept-scale test, not a current Council project. It shows how an overhead Military Road / Spit Road movement option and the Option 1 / Option 2 building envelopes would read in 3D, so traffic and built-form tradeoffs can be debated visually."
+            onClick={() => navigate('/bypass')}
+          />
+          <SummaryCard
+            icon={Zap}
+            title="Powerlines"
+            desc="The powerlines page checks the housing story against the electricity network. It summarises public HV/LV references, voltage categories, and likely upgrade pressure from EVs, solar export, V2G, apartments, and higher local demand over the next 20 to 30 years."
+            onClick={() => navigate('/powerlines')}
+          />
+          <SummaryCard
+            icon={BookOpen}
+            title="Reference Page"
+            desc="The reference library is the evidence base. It keeps the LEP, DCPs, Council policies, plans of management, contribution plans, and supporting documents close to the maps so claims can be checked before they are used in a submission or public argument."
+            onClick={() => navigate('/references')}
+          />
+        </div>
+      </section>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -127,6 +184,23 @@ function ActionCard({ icon: Icon, title, desc, color, onClick }) {
       <Icon size={20} className="text-slate-600 mb-2" />
       <p className="text-slate-900 font-semibold text-sm">{title}</p>
       <p className="text-slate-500 text-xs mt-1">{desc}</p>
+    </button>
+  )
+}
+
+function SummaryCard({ icon: Icon, title, desc, onClick }) {
+  return (
+    <button onClick={onClick}
+      className="bg-white border border-mosman-line rounded-xl p-4 text-left shadow-sm transition-colors hover:bg-slate-50">
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 rounded-lg bg-slate-100 p-2 text-slate-600">
+          <Icon size={18} />
+        </div>
+        <div>
+          <p className="text-sm font-bold text-slate-900">{title}</p>
+          <p className="mt-1 text-sm leading-relaxed text-slate-600">{desc}</p>
+        </div>
+      </div>
     </button>
   )
 }
