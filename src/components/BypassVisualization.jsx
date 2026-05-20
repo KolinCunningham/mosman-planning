@@ -1313,7 +1313,6 @@ export default function BypassVisualization() {
   const [showBypass, setShowBypass] = useState(true)
   const [showOption1, setShowOption1] = useState(false)
   const [showOption2, setShowOption2] = useState(true)
-  const [routeCalibrMode, setRouteCalibrMode] = useState(false)
   const [routeCoords, setRouteCoords] = useState(() => BYPASS_ROUTE_COORDS.map(c => [...c]))
   const animT = useRef(0)
 
@@ -1353,11 +1352,7 @@ export default function BypassVisualization() {
 
       {/* Shared toggles */}
       <div className="flex flex-wrap gap-2">
-        <ToggleBtn active={showBypass} onClick={() => setShowBypass(v => {
-          const next = !v
-          if (!next) setRouteCalibrMode(false)
-          return next
-        })}
+        <ToggleBtn active={showBypass} onClick={() => setShowBypass(v => !v)}
           colorOn="bg-slate-700 text-white" colorOff="bg-slate-100 text-slate-600">
           {showBypass ? 'Bypass ON' : 'Bypass OFF'}
         </ToggleBtn>
@@ -1369,49 +1364,14 @@ export default function BypassVisualization() {
           colorOn="bg-teal-600 text-white" colorOff="bg-slate-100 text-slate-600">
           Option 1 — Low &amp; Wide
         </ToggleBtn>
-        <ToggleBtn active={routeCalibrMode && showBypass} onClick={() => showBypass && setRouteCalibrMode(v => !v)}
-          colorOn="bg-cyan-200 text-cyan-900" colorOff="bg-slate-100 text-slate-600">
-          {routeCalibrMode ? 'Exit route calibration' : 'Calibrate route'}
-        </ToggleBtn>
       </div>
-
-      {/* Route calibration panel */}
-      {routeCalibrMode && showBypass && (
-        <div className="bg-cyan-950 border border-cyan-500/30 rounded-lg px-4 py-3">
-          <div className="flex items-center justify-between gap-3 mb-2">
-            <p className="text-xs font-bold text-cyan-200 uppercase tracking-wider">
-              Drag the numbered handles to align the route to Military Road
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                const text = JSON.stringify(routeCoords.map(c => [Number(c[0].toFixed(6)), Number(c[1].toFixed(6))]))
-                navigator.clipboard.writeText(text)
-              }}
-              className="text-xs font-semibold bg-cyan-200 text-cyan-900 px-2.5 py-1 rounded hover:bg-white flex-shrink-0"
-            >
-              Copy coords
-            </button>
-          </div>
-          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5 lg:grid-cols-7">
-            {routeCoords.map((coord, index) => (
-              <div key={index} className="bg-cyan-900/50 rounded px-2 py-1.5">
-                <p className="text-[10px] font-bold text-cyan-300 mb-0.5">#{index + 1}</p>
-                <p className="text-[10px] text-white font-mono leading-tight">
-                  {coord[0].toFixed(4)}<br />{coord[1].toFixed(4)}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* 3D aerial map */}
       <BypassMap3D
         showBypass={showBypass}
         showOption1={showOption1}
         showOption2={showOption2}
-        routeCalibrMode={routeCalibrMode}
+        routeCalibrMode={false}
         routeCoords={routeCoords}
         onRouteChange={setRouteCoords}
       />
