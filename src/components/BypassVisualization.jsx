@@ -62,11 +62,6 @@ const TIDAL_ROUTE_COORDS = [
   [151.220069, -33.828428],
   [151.219221, -33.828789],
   [151.218031, -33.828357],
-  [151.217556, -33.828182],
-  [151.216643, -33.828012],
-  [151.215612, -33.827750],
-  [151.214894, -33.827624],
-  [151.214199, -33.827631],
 ]
 
 const TIDAL_ROUTE_LABELS = [
@@ -74,7 +69,7 @@ const TIDAL_ROUTE_LABELS = [
   { coord: [151.2315, -33.8249], label: 'MacPherson Street' },
   { coord: [151.2275, -33.8279], label: 'Gerard Street' },
   { coord: [151.2226, -33.8290], label: 'Belgrave Street' },
-  { coord: [151.2150, -33.8277], label: 'Ernest Street' },
+  { coord: [151.2185, -33.8285], label: 'Ernest Street' },
 ]
 
 const BASE_STYLE = {
